@@ -1,11 +1,24 @@
 ---
 name: cwi-implement
-description: Implement the `plan.md`
+description: Implement the plan.md
+disable-model-invocation: true
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash, Agent
+effort: max
 ---
 
-Before implementing the `plan.md` always:
+Before implementing:
 
-- Read the `research.md` to have a full overview
-- Read the full `plan.md` deeply
+1. Read research.md for full project context
+2. Read plan.md completely — understand all phases and tasks before writing any code
 
-Implement the full `plan.md`. when you’re done with a task or phase, mark it as completed in the plan document. do not stop until all tasks and phases are completed. do not add unnecessary comments. continuously run checks to make sure you’re not introducing new issues.
+Implementation rules:
+
+1. Work through plan.md phases in order, top to bottom
+2. After completing each task, mark it as done in plan.md: `- [x]`
+3. After each phase, run the project's test/build/lint commands to verify no regressions
+4. If a test or build fails, fix it before moving to the next task
+5. Do not add comments unless the logic is non-obvious
+6. Do not refactor code outside the plan's scope
+7. If you encounter an ambiguity or blocker not covered by the plan, stop and ask the user
+
+Do not stop until all phases and tasks in plan.md are marked complete.
