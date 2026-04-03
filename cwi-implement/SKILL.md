@@ -8,8 +8,10 @@ effort: max
 
 Before implementing:
 
-1. Read research.md for full project context
-2. Read plan.md completely — understand all phases and tasks before writing any code
+1. Read research.md for full project context. If it links to
+   topic files in `docs/research/`, read those too.
+2. Read plan.md completely — understand all phases and tasks
+   before writing any code
 
 Implementation rules:
 
