@@ -4,8 +4,7 @@ description: >-
   Research the codebase and write research.md. For large
   projects, split topic files into docs/research/.
 context: fork
-agent: Explore
-allowed-tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash, WebSearch, WebFetch
 effort: max
 argument-hint: "[focus-area]"
 ---
