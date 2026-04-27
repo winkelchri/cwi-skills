@@ -1,70 +1,62 @@
 ---
 name: cwi-research
 description: >-
-  Research the codebase and write research.md. For large
-  projects, split topic files into docs/research/.
+  Research the codebase and write research.md. For
+  large projects, split topic files into
+  docs/research/.
 context: fork
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash, WebSearch, WebFetch
 effort: max
 argument-hint: "[focus-area]"
 ---
 
-Research the codebase following these steps:
+Research the codebase and produce concise reference
+documentation. Prioritize brevity -- every line
+costs tokens on every future read.
 
-1. Use Glob to get a complete file listing of all source code
-   files (exclude node_modules, dist, build, .git, vendor,
-   __pycache__)
-2. If there are more than 50 source files, ask the user what to
-   focus on. Otherwise proceed.
-3. Read all source files systematically — group by
-   directory/module
-4. **Migrate legacy layout**: If a `research/` folder exists at
-   the project root, move its contents to `docs/research/` and
-   remove the old `research/` folder. Update any links in
-   `research.md` to point to the new paths.
-5. If a research.md already exists, read it and validate its
-   contents against current code. Remove any outdated
-   information. Also check `docs/research/` for existing
-   sub-files.
-6. If the user has given specific instructions, use WebSearch to
-   verify technical assumptions before including them.
+## Steps
 
-## Output structure
+1. Glob all source files (exclude node_modules,
+   dist, build, .git, vendor, __pycache__).
+2. If >50 source files, ask user what to focus on.
+3. Read source files grouped by directory.
+4. If `research/` exists at project root, move
+   contents to `docs/research/` and update links.
+5. If research.md exists, validate against code.
+   Remove outdated content.
+6. If user gave specific instructions, use WebSearch
+   to verify technical assumptions.
 
-When research is complete, decide based on project size:
+## Output
 
-**Small projects** (research fits comfortably in one file):
+**Small projects** (<300 lines of research):
+single `research.md` at project root.
 
-- Write a single `research.md` at the project root using the
-  structure from [research-template.md](research-template.md).
+**Larger projects**: `research.md` as index
+(overview + linked topic list), detailed files in
+`docs/research/` (one per topic, self-contained).
 
-**Larger projects** (research would exceed ~300 lines):
+## Size rules
 
-- Write `research.md` at the project root as an **index** —
-  it contains the Overview section and a linked list of topic
-  files, but not the full detail.
-- Write detailed topic files into `docs/research/`, one per
-  major area (e.g., `docs/research/architecture.md`,
-  `docs/research/auth-flow.md`).
-- Each topic file should be self-contained with a clear heading
-  and scope.
-- Use the structure from
-  [research-index-template.md](research-index-template.md) for
-  the index and
-  [research-template.md](research-template.md) for the overall
-  section structure.
+- Research docs are LLM context -- keep them as
+  short as possible while remaining useful.
+- Describe what IS, not what COULD BE. Remove
+  speculative content and alternatives-considered.
+- For implemented features: document behavior and
+  integration points, not the pre-implementation
+  research.
+- Merge trivially small topic files into neighbors.
+- Target: <80 lines per topic file, <60 lines for
+  the index.
 
-## Markdown compliance
+## Markdown rules
 
-All generated files **must** be clean Markdown:
+- Lines <=80 chars (code blocks exempt).
+- Blank line before/after headings.
+- No skipped heading levels.
+- No trailing whitespace or consecutive blank lines.
+- Lists: `-` unordered, `1.` ordered.
+- Fenced code blocks need a language identifier.
 
-- Lines must not exceed 80 characters (wrap prose). Code blocks
-  are exempt when a single token exceeds 80 characters.
-- One blank line before and after every heading.
-- Heading levels must not skip (no `##` followed by `####`).
-- No trailing whitespace, no multiple consecutive blank lines.
-- Lists use `-` for unordered items and `1.` for ordered items.
-- Fenced code blocks must have a language identifier.
-
-If the user specified a focus area, prioritize researching:
+If the user specified a focus area, prioritize:
 $ARGUMENTS

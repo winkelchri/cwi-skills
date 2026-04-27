@@ -1,19 +1,21 @@
 # Research
 
 ## Overview
-One-paragraph summary of what this project does.
+
+One paragraph: what the project does.
 
 ## Architecture
-How the codebase is organized — directories, entry points, data flow.
+
+Directory layout, entry points, data flow.
 
 ## Key Components
-Each major module/class with its responsibility and public interface.
+
+Major modules with responsibilities.
 
 ## Dependencies
-External dependencies and what they're used for.
 
-## Patterns & Conventions
-Coding patterns, naming conventions, configuration approach.
+External deps and their purpose.
 
-## Notable Details
-Edge cases, workarounds, or non-obvious design decisions.
+## Patterns
+
+Coding conventions and non-obvious decisions.

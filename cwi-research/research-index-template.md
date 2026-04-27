@@ -2,19 +2,16 @@
 
 ## Overview
 
-One-paragraph summary of what this project does.
+One paragraph: what the project does.
 
 ## Topics
 
-- [Architecture](docs/research/architecture.md) — How the
-  codebase is organized, entry points, data flow.
-- [Topic Name](docs/research/topic-name.md) — Brief description
-  of what this topic covers.
+- [Topic](docs/research/topic.md) -- Brief scope.
 
 ## Dependencies
 
-External dependencies and what they are used for.
+External deps and their purpose.
 
-## Patterns & Conventions
+## Patterns
 
-Coding patterns, naming conventions, configuration approach.
+Coding conventions and non-obvious decisions.
