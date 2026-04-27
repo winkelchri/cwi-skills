@@ -3,8 +3,9 @@ name: cwi-implement-sonnet
 description: Implement the plan.md using Sonnet for faster, cost-efficient execution
 disable-model-invocation: true
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash, Agent
-model: sonnet
+model: claude-sonnet-4-6
 effort: high
+context: fork
 ---
 
 Before implementing:
