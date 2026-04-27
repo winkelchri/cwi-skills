@@ -12,6 +12,10 @@ Before implementing:
    topic files in `docs/research/`, read those too.
 2. Read plan.md completely — understand all phases and tasks
    before writing any code
+3. Check `.claude/agents/` for custom agents that match tasks
+   in the plan. Delegate to matching agents instead of doing
+   the work inline — they carry project-specific context
+   (conventions, quirks, patterns) that avoids rediscovery.
 
 Implementation rules:
 
