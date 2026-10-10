@@ -41,6 +41,8 @@ For each ticket read its number `NN` (filename prefix), its `Status:` line and i
 
 A ticket is **workable** when its status is `ready-for-agent` (or `claimed` with no Ledger outcome, left over from an interrupted run), every blocker's status starts with `done`, and it has no outcome from this run in the Ledger yet. Take the lowest-numbered workable ticket. Dependencies set the order, never numbering alone.
 
+A `claimed` ticket whose Ledger outcome is `in review` was interrupted after its build commit passed verification: it comes before any workable ticket. Resume it in the [review and fix loop](#review-and-fix-loop) with `base` from its Ledger row: no `<dir>/runs/NN-review-*.md` yet → step 1 with `R = 0`; otherwise take its newest review `NN-review-R.md` and act on that review's verdict line from step 5. Its Implementer cannot be resumed, so its fix rounds 1–3 go to a fresh Sonnet Implementer.
+
 Nothing workable → [Finish](#finish).
 
 ## Work one ticket
@@ -53,29 +55,52 @@ Nothing workable → [Finish](#finish).
    - the report path `<dir>/runs/NN-report.md`
    - the skills root
    - the safety rules, word for word
-3. **Dispatch** one fresh Implementer: Agent tool, `subagent_type: cwi-skills:implementer`, in the foreground, prompt `Brief: <brief path>. Work this ticket.` Its final line is `STATUS: <status> — <evidence or reason>`. A missing or unreadable status line counts as `BLOCKED`.
+3. **Dispatch** one fresh Implementer: Agent tool, `subagent_type: cwi-skills:implementer`, in the foreground, prompt `Brief: <brief path>. Work this ticket.` Keep the agent ID the result gives; fix rounds resume it. Its final line is `STATUS: <status> — <evidence or reason>`. A missing or unreadable status line counts as `BLOCKED`.
 4. **Verify** it yourself, whatever the report claims:
    - exactly one new commit: `git rev-list --count <base>..HEAD` is `1`
    - that commit touches nothing under `<dir>`: `git diff --name-only <base> HEAD`
    - the Gate is green when you run it
-5. **Record** the outcome in the ticket and the Ledger:
 
    | Implementer status | Verification | Ticket `Status:` | Then |
    |---|---|---|---|
-   | `DONE`, `DONE_WITH_CONCERNS` | passes | `done (<short sha>)` | Ledger row `done`, commit, any concerns. Next ticket. |
+   | `DONE`, `DONE_WITH_CONCERNS` | passes | stays `claimed` | Ledger row `in review`, commit range, any concerns. [Review](#review-and-fix-loop). |
    | any | no new commit | back to `ready-for-agent` | Ledger row with the status and reason (verbatim for `BLOCKED` / `NEEDS_CONTEXT`). Next ticket. |
    | any other status, or a failed check | new commits | back to `ready-for-agent` | Ledger row naming the status or failed check, and the commit range. Stop the run: later tickets would build on unverified work. |
 
-6. Tell the user one line: `NN <title>: <ticket status or outcome>`.
+5. Tell the user one line: `NN <title>: <ticket status or outcome>`. Unless the table sent you to the review, pick the next ticket.
 
-Then pick the next ticket.
+## Review and fix loop
+
+Every ticket passes a Ticket review before it counts as done. Diffs, reviews and reports travel as files under `<dir>/runs/`; you pass paths and read only final lines and the sections named below. Your prompts carry paths and the round number only: the reviewer judges, the Implementer checks the findings, and you add no opinion of any finding in either direction.
+
+1. **Package.** Write the review package with a shell redirect, so the diff never enters your context:
+
+   ```sh
+   { git log --format='%h %s' <from>..HEAD; echo; git diff --stat <from> HEAD; echo; git diff <from> HEAD; } > <dir>/runs/NN-package-R.md
+   ```
+
+   For the first review `<from>` is the ticket's base and `R` is `0`; for round `R`'s re-review `<from>` is the commit before that round.
+2. **Review brief.** Write `<dir>/runs/NN-review-brief-R.md` with: the ticket and spec paths, the package path, the newest Implementer report path, the output path `<dir>/runs/NN-review-R.md`, the safety rules word for word, and for `R ≥ 1` the round number and the previous review path.
+3. **Dispatch** one fresh Ticket reviewer: Agent tool, `subagent_type: cwi-skills:ticket-reviewer`, in the foreground, prompt `Review brief: <path>.` Its final line is `VERDICT: <PASS | FAIL> — spec <PASS | FAIL>; critical <n>; important <n>; minor <n>`. A missing verdict line counts as `FAIL`.
+4. **Defer Minors.** Copy each line of the review file's `## Minor` section, and each `Cannot verify` spec line, into the Ledger's `## Deferred findings` as `- NN — <finding>`. Minor findings never start a fix round.
+5. **Verdict `PASS`** → set the ticket's `Status:` to `done (<short sha of HEAD>)` and update its Ledger row: outcome `done`, commit range `<base>..HEAD`, review `PASS after <R> fix rounds`. Next ticket.
+6. **Verdict `FAIL`** → run fix round `F = R + 1`:
+   - Write `<dir>/runs/NN-fix-brief-F.md`: the original brief path, the paths of this ticket's reviews so far (newest last), the round number `F`, the report path `<dir>/runs/NN-report-F.md`, and the commit subject format `fix: <summary> (ticket NN, review round F)`.
+   - Note `<from> = git rev-parse HEAD`.
+   - **Rounds 1–3** resume the ticket's Implementer: SendMessage to its agent ID (load the tool through ToolSearch if it is deferred), message `Fix brief: <path>.` If resuming is unavailable, dispatch a fresh Sonnet Implementer with that prompt instead and record a Ruling.
+   - **Round 4** dispatches a fresh Implementer on Opus: Agent tool, `subagent_type: cwi-skills:implementer`, `model: opus`, prompt `Fix brief: <path>.` **Round 5** resumes that Opus Implementer the same way (fresh on Opus if resuming is unavailable).
+   - Verify: any new commits touch nothing under `<dir>`, and the Gate is green. Then go back to step 1 with `R = F` for the round's re-review. A round that leaves the Gate red, or ends `BLOCKED` / `NEEDS_CONTEXT`, gets no re-review; name its outcome and the Gate log path in the next fix brief.
+7. **Round 5 still failing** → the ticket is stuck. Leave its `Status:` at `claimed`, update its Ledger row to outcome `stuck`, the commit range and the newest review path, and add an open item under `## Checkpoints`: `NN stuck after 5 fix rounds — open: <finding ids> — see <review path>`. This item waits for the human at the end of the run; it does not stop the run now. Gate green → carry on with the next ticket; tickets blocked by this one wait. Gate red → stop the run: later tickets would build on a red branch.
+
+Tell the user one line per review: `NN review R: <verdict line>`.
 
 ## Finish
 
 Final message:
 
-- each ticket's outcome, with its commit for done ones
-- the tickets left open and why
+- each ticket's outcome and review verdict, with its commit range for done ones
+- the tickets left open and why, and every open Checkpoint
+- the deferred findings from the Ledger
 - every Ruling from the Ledger
 - the run's commit range `<base>..HEAD` and that State files are uncommitted
 
@@ -92,8 +117,8 @@ Final message:
 
 ## Tickets
 
-| Ticket | Outcome | Commits | Notes |
-|---|---|---|---|
+| Ticket | Outcome | Commits | Review | Notes |
+|---|---|---|---|---|
 
 ## Rulings
 

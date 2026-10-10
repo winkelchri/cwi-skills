@@ -15,11 +15,17 @@ Operator prompts never pre-judge findings.
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Every done ticket has a recorded Ticket review verdict in the Ledger
-- [ ] Brief, report and review package are passed as files
-- [ ] Critical/Important findings trigger fix rounds; Minor findings appear as deferred in the Ledger
-- [ ] Model escalation happens at round 4; the loop never exceeds 5 rounds
-- [ ] A ticket exhausting its rounds becomes an open Checkpoint item while other tickets continue
-- [ ] Eval case "fix loop" (a ticket whose spec contains a trap the reviewer should catch) passes
+- [x] Every done ticket has a recorded Ticket review verdict in the Ledger
+- [x] Brief, report and review package are passed as files
+- [x] Critical/Important findings trigger fix rounds; Minor findings appear as deferred in the Ledger
+- [x] Model escalation happens at round 4; the loop never exceeds 5 rounds
+- [x] A ticket exhausting its rounds becomes an open Checkpoint item while other tickets continue
+- [x] Eval case "fix loop" (a ticket whose spec contains a trap the reviewer should catch) passes
+
+## Comments
+
+- The Ticket reviewer is `agents/ticket-reviewer.md` (Sonnet, `cwi-skills:ticket-reviewer`): spec verdict (Missing / Extra / Misunderstood / Cannot verify), quality findings graded Critical / Important / Minor with `path:line`, re-review marks ADDRESSED / NOT ADDRESSED, final line `VERDICT: ...`. The loop is the "Review and fix loop" section of `skills/sdd/SKILL.md`; the Implementer's "Fix rounds" section makes it check each finding and fix or dispute it.
+- A ticket that passes verification gets the Ledger outcome `in review` until its verdict is `PASS`, so an interrupted run resumes at the review. Fix rounds add `fix: ... (ticket NN, review round F)` commits, so a reviewed ticket can own more than one commit; its status names the last one and its Ledger row the range.
+- Eval: `evals-e2e/fix-loop/` (needs Bash, like the other e2e cases). Verified with headless runs; details in the spec's "Build notes (ticket 04)".

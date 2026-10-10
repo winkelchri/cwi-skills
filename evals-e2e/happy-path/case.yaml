@@ -14,7 +14,7 @@ execution:
   prompt: /sdd demo
   max_turns: 120
   timeout_seconds: 3600
-  allowed_tools: [Bash, Read, Write, Edit, Glob, Grep, Agent, Skill]
+  allowed_tools: [Bash, Read, Write, Edit, Glob, Grep, Agent, Skill, SendMessage, ToolSearch]
 runs: 1
 graders:
   - type: regex

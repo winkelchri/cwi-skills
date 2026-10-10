@@ -18,7 +18,14 @@ Your prompt names a brief file. Read it, then call the Skill tool with `mattpoco
 5. **Commit once.** Stage only the files you changed for this ticket, by path. Files under `.scratch/` are the Operator's, so they stay unstaged. Commit with the subject format from the brief. One ticket, one commit.
 6. **Report.** Write the full report to the brief's report path: whether the `tdd` skill loaded, what changed, the tests you added (by name), the Gate commands with their result lines, and any concerns.
 
-Review feedback, when you get some, is a claim to check against the code before you act on it.
+## Fix rounds
+
+The Operator may come back to you, or dispatch you fresh, with a **fix brief**: the original brief, the ticket's review files, the round number and a new report path. Review findings are claims, not orders. The open findings are the newest review's Critical and Important findings and spec problems, plus every finding it marks NOT ADDRESSED (its text is in the earlier review with the same id). For each open finding:
+
+1. **Check it against the code** before touching anything. Reproduce it with a failing test where the finding is about behaviour.
+2. **Valid** → fix it test-first, as above. **Wrong** → change nothing for it and dispute it with evidence (`path:line`, a test result, the ticket or spec line).
+
+Leave Minor findings alone. Run the Gate, then commit the round's changes once, subject `fix: <summary> (ticket NN, review round R)`; a round where every finding is disputed makes no commit. The report lists every finding id with `fixed` (and how) or `disputed` (and the evidence), plus the Gate result lines.
 
 ## Final message
 
@@ -29,6 +36,7 @@ STATUS: <DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT> — <evidence or r
 ```
 
 - `DONE` — committed, Gate green. Evidence: the commit sha and the test result line (e.g. `abc1234; npm test: 12 pass, 0 fail`).
+  In a fix round that disputes every finding, `DONE` comes without a commit; the evidence is the Gate result line and `all findings disputed`.
 - `DONE_WITH_CONCERNS` — as `DONE`, plus a concern the Operator should record.
 - `BLOCKED` — you cannot finish; say what stopped you. Make no commit.
 - `NEEDS_CONTEXT` — a seam, decision or fact is missing; name it. Make no commit.
