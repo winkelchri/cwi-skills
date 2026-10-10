@@ -1,6 +1,6 @@
 ---
 name: sdd
-description: Subagent-driven development. Run as the Operator over .scratch/<slug>/ and drive its tickets to committed code through fresh Implementer subagents.
+description: Subagent-driven development. Run as the Operator over .scratch/<slug>/ and drive its tickets to committed code through fresh Implementer subagents, or work a wayfinding map's agent-doable tickets until the way is clear.
 disable-model-invocation: true
 argument-hint: <slug>
 ---
@@ -11,7 +11,7 @@ No slug given → reply `Usage: /sdd <slug>` and stop.
 
 ## Ground rules
 
-- **State files** are the only files you write: everything under `<dir>` (spec, tickets, `ledger.md`, `runs/`). Product code, tests, config and commits belong to the Implementer. State files stay uncommitted in the working tree. Scratch output, such as saved Gate logs, goes under `<dir>/runs/` too.
+- **State files** are the only files you write: everything under `<dir>` (spec, tickets, map, `ledger.md`, `runs/`, `research/`). Product code, tests, config and commits belong to the Implementer. State files stay uncommitted in the working tree. Scratch output, such as saved Gate logs, goes under `<dir>/runs/` too.
 - **Safety rules** — you follow them, and every brief carries them word for word:
 
   > No `git push` or force-push. No `git reset`, no branch deletion, no history rewriting. No merging, rebasing or cherry-picking a `prototype/*` branch into any other branch. No reading or writing files outside this repository; the one exception is reading installed skills under `~/.claude/plugins/`.
@@ -28,12 +28,12 @@ No slug given → reply `Usage: /sdd <slug>` and stop.
 Each check below can refuse the run. A refusal stops before any ticket is claimed, any branch is switched or any agent is dispatched.
 
 1. **Permissions.** The plugin's hook (`hooks/sdd-permission-preflight.sh`) has already checked the session's permission mode before you saw this prompt; it refuses `/sdd` in plan mode, and in Manual or acceptEdits mode without the allowlist documented in [permissions.md](permissions.md). If your context holds a `/sdd permission preflight` note, this session runs on that allowlist: remember its allowed Bash entries for step 6.
-2. **Folder.** `<dir>/issues/*.md` exist → ticket mode; read them all. Otherwise `<dir>/map.md` exists → wayfinding mode, which is not built yet: say so and stop. Neither (or no `<dir>` at all) → stop and write nothing, replying:
+2. **Folder.** A **map ticket** is a file in `<dir>/issues/` whose `Type:` line is `research`, `prototype`, `grilling` or `task` and whose `Status:` line is absent, `open`, `claimed` or starts with `resolved`; it belongs to a wayfinding map. Every other file in `<dir>/issues/*.md` is an implementation ticket. Implementation tickets exist → ticket mode; read them all, and ignore map tickets for the rest of the run. Otherwise `<dir>/map.md` exists → [wayfinding mode](#wayfinding-mode): do steps 3 and 4, then go there; it has no Gate and no branch switch. Neither (or no `<dir>` at all) → stop and write nothing, replying:
 
    > `.scratch/<slug>/` holds neither tickets nor a wayfinding map. Plan the feature first: `/to-spec` then `/to-tickets` for a feature you can describe, or `/wayfinder` to map an effort that is still unclear. Then run `/sdd <slug>` again.
 
-3. **Ledger.** `<dir>/ledger.md` exists → this is a resumed run: reuse its branch, Gate and skills root, and take the Ledger and the tickets' `Status:` lines as they stand. Done tickets are never worked again; open Checkpoint items wait for the next Checkpoint, except an open `Run stalled` item, which this restart answers: tick it. A Ledger left by a run that aborted at startup records no run branch yet; step 8 still applies. If the current branch is a `prototype/*` branch, an interrupted [prototype build](#build-a-prototype) left it: with the tree clean outside `<dir>`, switch back to the Ledger's run branch; otherwise stop and name the uncommitted paths. Otherwise create it from [the template](#ledger-template).
-4. **Skills root.** Record the newest `~/.claude/plugins/cache/*/mattpocock-skills/<version>/skills/` in the Ledger (ADR-0001: user-only upstream skills are read by path from there).
+3. **Ledger.** `<dir>/ledger.md` exists and its `Mode:` line matches this run's mode (no `Mode:` line means ticket mode) → this is a resumed run. A Ledger from the other mode is left over from an earlier stage of this effort, typically the map that led to these tickets: rename it to `<dir>/ledger-<its mode>.md` and start a fresh one. On a resumed run in ticket mode: reuse its branch and Gate, and take the Ledger and the tickets' `Status:` lines as they stand. Done tickets are never worked again; open Checkpoint items wait for the next Checkpoint, except an open `Run stalled` item, which this restart answers: tick it. A Ledger left by a run that aborted at startup records no run branch yet; step 8 still applies. If the current branch is a `prototype/*` branch, an interrupted [prototype build](#build-a-prototype) left it: with the tree clean outside `<dir>`, switch back to the Ledger's run branch; otherwise stop and name the uncommitted paths. With no Ledger to resume, create it from [the template](#ledger-template) for the run's mode.
+4. **Skills root.** Record the newest `~/.claude/plugins/cache/*/mattpocock-skills/<version>/skills/` in the Ledger, by version order (`ls -d ~/.claude/plugins/cache/*/mattpocock-skills/*/skills | sort -V | tail -1`), never a copy (ADR-0001: user-only upstream skills are read by path from there). In wayfinding mode also record `Wayfinder skill:`, the path `find <skills root> -name SKILL.md -path '*/wayfinder/*'` prints. A resumed run re-resolves both, so an upstream update reaches it, and updates the Ledger if they moved.
 5. **Gate** — the project's typecheck plus full test suite. Look in `CLAUDE.md`, `AGENTS.md`, then manifests (`package.json` scripts, `Makefile`, `pyproject.toml`, `Cargo.toml`, `go.mod`). One clear set of commands → use it. Conflicting candidates, or none → ambiguous: ask now with `AskUserQuestion`, one option per candidate (no tool → record the `Gate` item and stop). Record the chosen Gate as a Ruling naming its source, for example: Gate is `npm test` — package.json "test" script, no typecheck configured — cost if wrong: broken work counted as done.
 6. **Gate on the allowlist.** Only with a preflight note from step 1: every Gate command must match one of its allowed Bash entries (`Bash(npm test:*)` covers `npm test`). Any missing → stop, name the entries to add to `.claude/settings.local.json`, and point the user to `${CLAUDE_SKILL_DIR}/permissions.md` (give the path, don't read it). The run would otherwise stall on the first Gate run inside an Implementer.
 7. **Gate is green.** Run the Gate on the current branch, output saved to `<dir>/runs/gate-start.log`. Red → abort: claim nothing, switch no branch, dispatch nothing. Record under `## Checkpoints` in the Ledger: `- [ ] Gate — red at start (<command>: <failing summary>) — fix it, then run /sdd <slug> again`. On a resumed run whose Gate is now green, tick any such open item (`- [x]`). Reply with the failing command and the decisive lines of its output, and stop. A red Gate at start would make failures from new work indistinguishable from existing ones.
@@ -249,13 +249,67 @@ Final message (after a Final Checkpoint, its presentation is this message, plus 
 - the run's commit range `<base>..HEAD` and that State files are uncommitted
 - any `prototype/*` branches the run created, left in place unless the human picked their deletion at the Final Checkpoint: they are the prototypes' record, and deleting them is the human's call
 
+## Wayfinding mode
+
+`<dir>` holds a wayfinding map (`map.md`) and no implementation tickets. You work the map unattended: Scouts resolve its AFK tickets, you keep the map, and the human gets the HITL tickets. It plans, it builds nothing, so there is no Gate, no branch switch, no Ticket review and no commit. It stops when the way to the destination is clear.
+
+**Follow the upstream skill.** Read the `Wayfinder skill:` path from the Ledger once, now, and follow it as the map's owner: the map body, ticket types, fog of war, out of scope, refer by name, and its "Work through the map" mode. Its tracker-specific operations are this repo's local-markdown ones: the map is `<dir>/map.md`, tickets are `<dir>/issues/NN-<name>.md` with `Type:`, `Blocked by:` and `Status:` lines, and resolving appends `## Answer` and sets `Status: resolved`. A ticket ruled out of scope gets `Status: resolved (out of scope)`, so it is closed for blocking too. The skill's limit of one resolved ticket per session holds per Scout: each Scout resolves exactly one. Its HITL tickets are the human's; you never resolve them, and neither does any agent.
+
+Below, a ticket is **open** when its `Status:` line is absent or `open`, and **closed** when it starts with `resolved`. Name tickets by title in everything the human reads, with the path inside the name: `"Transliteration library" (issues/02-transliteration-library.md)`.
+
+### Each round
+
+1. **Load the map**: `map.md`, plus each ticket's title, `Type:`, `Blocked by:` and `Status:` lines, never whole ticket bodies.
+2. **Offline answers.** A ticket that is not closed but has an `## Answer` section was answered by the human outside the run (find them with `grep -l '^## Answer' <dir>/issues/*.md`, never from a partial read): set `Status: resolved` and tick its Checkpoint item. A ticket closed with no line for it in the map's `## Decisions so far` — the human resolved it in a session that did not record it — gets that line now, its gist taken from the `## Answer` section. Both count as progress.
+3. **Frontier**: open tickets whose `Blocked by:` tickets are all closed, plus `claimed` tickets whose Ledger outcome is `dispatched` (an interrupted run left them). A `claimed` ticket with no Ledger row is another session's: leave it. Skip tickets whose Ledger outcome is `HITL` or `failed`.
+4. **HITL tickets on the frontier.** Each `grilling` or `prototype` ticket without an item gets one under `## Checkpoints`: `- [ ] NN <type> — "<title>": <question> — <ticket path>`. They are presented, never worked: deciding is the human's, in a live session.
+5. **Pick AFK work.** Every `research` ticket on the frontier, all at once. None → the lowest-numbered `task` ticket, alone: tasks run one at a time, since one may change what the next one finds. None → [Stop](#stop-wayfinding).
+6. **Dispatch.** For each picked ticket: set `Status: claimed`, add a Ledger row with outcome `dispatched`, and write `<dir>/runs/NN-brief.md` with the map path, the ticket path, the `Wayfinder skill:` path, the skills root, the findings path `<dir>/research/NN-<name>.md` (`<name>` is the rest of the ticket's filename), the report path `<dir>/runs/NN-report.md` and the safety rules, word for word. Note `git rev-parse HEAD` and `git status --porcelain -- . ':!<dir>'`. Then dispatch one fresh Scout per ticket, all in one message so research runs in parallel: Agent tool, `subagent_type: cwi-skills:scout`, `model: sonnet`, in the foreground, prompt `Brief: <brief path>. Resolve this map ticket.` Its final line is `STATUS: <RESOLVED | HITL | FAILED> — <gist or reason>`. A missing status line counts as `FAILED`.
+7. **Verify** each Scout yourself, whatever it claims:
+   - `RESOLVED`: the ticket's `Status:` is `resolved`, it has an `## Answer` section, and the findings file exists and is not empty.
+   - For every Scout: `HEAD` and the status outside `<dir>` are as you noted. Anything else means a Scout changed the repo: name the paths in the Ledger and [stop as stalled](#stalls). Change nothing back yourself.
+
+   | Scout status | Verification | Ticket `Status:` | Ledger | Checkpoint item |
+   |---|---|---|---|---|
+   | `RESOLVED` | passes | `resolved` | outcome `resolved`, findings path, gist | none |
+   | `RESOLVED` | fails | back to `open` | outcome `failed — <check>` | `- [ ] NN failed — <check> — <report path>` |
+   | `HITL` | — | back to `open` | outcome `HITL — <reason>` | `- [ ] NN task — "<title>": <reason; the report's checklist> — <report path>` |
+   | `FAILED` | — | back to `open` | outcome `failed — <reason>` | `- [ ] NN failed — <reason> — <report path>` |
+
+8. **Record on the map**, once every Scout of the round is back, one ticket at a time in number order:
+   - Append to `## Decisions so far`: `- [<title>](issues/NN-<name>.md) — <gist>`, the gist from the status line.
+   - Apply the report's `## Map updates` section, read alone. New tickets get the next free number, `Type:`, `Blocked by:` (names turned into numbers, `None` if none) and `Status: open`, with the question under `## Question`; create them all, then wire `Blocked by:` lines. Remove each graduated fog patch from `## Not yet specified`. An out-of-scope ticket gets `Status: resolved (out of scope)` and one line under `## Out of scope` with its gist, why, and its link. An invalidated ticket gets the change written into it. A proposed ticket that duplicates a live one is not created: add its point to that ticket's `## Comments`. Record a Ruling for every out-of-scope, invalidated or folded ticket: it changes the human's map.
+9. Tell the user one line per ticket: `"<title>": <outcome — gist or reason>`. [Count the round](#stalls): it makes progress when at least one ticket was resolved, by a Scout or offline. Next round.
+
+### Stop (wayfinding)
+
+Reached when no AFK ticket is on the frontier.
+
+- **Clear** — every ticket is closed and `## Not yet specified` holds nothing but comments: the way to the destination is clear. Notify `/sdd <slug>: run done — map clear` and [Finish](#finish) as clear.
+- **Human's turn** — anything else. Open tickets with no item and nothing on the frontier (everything left is blocked by HITL tickets), or fog with no open ticket to clear it, gets one item: `- [ ] Map — <what is left: blocked tickets by name, or the fog patches> — <map path>`. Notify `/sdd <slug>: <n> Checkpoint item(s) waiting` and present every open item in one message, each by ticket name, with its type, question and how the human settles it:
+  - grilling or prototype → a live session: `/wayfinder` with the map, naming the ticket. That session resolves and records it
+  - HITL task → do the report's checklist, then append `## Answer` with what was done and any resulting facts
+  - failed → re-run `/sdd <slug>` to retry it, after adding any guidance under the ticket's `## Comments`
+  - Map → `/wayfinder` with the map, to chart the fog or settle the blockers
+
+  No `AskUserQuestion`: these items need a live session, and planning conversations stay outside `/sdd`. [Finish](#finish) as stopped at a Checkpoint. Running `/sdd <slug>` again picks up the answers and carries on.
+
+A resumed wayfinding run takes the map, the tickets' `Status:` lines and the Ledger as they stand. It retries every ticket whose Ledger outcome is `failed` (the restart is the human's go-ahead): set its outcome to `reopened` and tick its item. It also ticks an open `Run stalled` item and every item whose ticket is now closed, and drops the `Map` item, which the next stop recreates if it still applies.
+
+The [Stalls](#stalls) rule applies with a round in place of a ticket attempt. The [Finish](#finish) message lists tickets by name: those resolved this run with their gists, those left open with their type and why, every open item with how to settle it, the Rulings, and that State files are uncommitted. After a clear map it ends with the next step:
+
+> The way to the destination is clear. Next: `/to-spec`, with `.scratch/<slug>/map.md` and its resolved tickets as input, then `/to-tickets`, then `/sdd <slug>` to build it.
+
 ## Ledger template
+
+Ticket mode:
 
 ```markdown
 # Ledger — <slug>
 
 ## Run
 
+- Mode: ticket
 - Branch: <branch> (base <sha>)
 - Gate: `<command>`[, `<command>`]
 - Skills root: <path>
@@ -275,4 +329,30 @@ Final message (after a Final Checkpoint, its presentation is this message, plus 
 - [ ] <id> — <question> — <context path>
 
 ## Deferred findings
+```
+
+Wayfinding mode:
+
+```markdown
+# Ledger — <slug>
+
+## Run
+
+- Mode: wayfinding
+- Map: <dir>/map.md
+- Skills root: <path>
+- Wayfinder skill: <path>
+
+## Tickets
+
+| Ticket | Type | Outcome | Findings | Gist or reason |
+|---|---|---|---|---|
+
+## Rulings
+
+- <what> — <why> — <cost if wrong>
+
+## Checkpoints
+
+- [ ] <id> — <question> — <context path>
 ```

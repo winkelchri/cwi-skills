@@ -22,6 +22,10 @@ _Avoid_: Code reviewer, checker
 A fresh Opus subagent that performs the Branch review, or its one re-review, and sorts each finding as unambiguous or a judgement call.
 _Avoid_: Final reviewer
 
+**Scout**:
+A fresh Sonnet subagent that resolves one AFK Map ticket (research or task) in wayfinding mode, writes the answer into the ticket, and proposes map updates for the Operator to apply. It changes no code and commits nothing.
+_Avoid_: Researcher, wayfinder child
+
 ### Tickets
 
 **Ticket**:
@@ -39,6 +43,10 @@ _Avoid_: Manual ticket, human ticket
 **Prototype ticket**:
 A Ticket (`Type: prototype`) whose decision is best made by trying throwaway code. An Implementer builds its variants on a `prototype/<name>` branch, which never lands on the feature branch; the human picks a variant at a Checkpoint, and the choice is written back to the Ticket.
 _Avoid_: Spike ticket, experiment
+
+**Map ticket**:
+A child ticket of a wayfinding map (`Type:` research, prototype, grilling or task) whose resolution is a decision or a fact, not code. It goes from open to claimed to resolved; research and agent-doable tasks go to Scouts, grilling and prototype tickets to the human at a Checkpoint.
+_Avoid_: Wayfinder ticket, decision ticket (a decision ticket is the human part of a split HITL ticket)
 
 **Checkpoint**:
 A pause where the Operator presents the human with a batch of pending HITL decisions, prototype selections or escalations, after the integrated branch has passed the Gate. The run continues on every Ticket not blocked by a pending Checkpoint. The **Final Checkpoint** ends the run: a summary, every Ruling and the deferred findings, with push, PR and cleanup offered but never performed unasked.

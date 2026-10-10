@@ -56,6 +56,7 @@ What each group is for:
 - **Edits.** `Edit` and `Write`: the Implementer writes product code and tests, and the Operator writes the State files under `.scratch/<slug>/`.
 - **Upstream skills.** `Read(~/.claude/plugins/**)` lets agents read user-only mattpocock-skills by path (ADR-0001). `Skill(...)` lets the Implementer load `tdd` by name.
 - **Git.** Inspecting history, switching to the `sdd/<slug>` branch, staging and committing. Nothing that pushes, resets or deletes: those stay prompted, as they should.
+- **Wayfinding.** A run on a wayfinding map commits nothing and runs no Gate, but its Scouts research. Add `"Skill(mattpocock-skills:research)"`, plus `"WebFetch"` and `"WebSearch"` when the map's research needs the web.
 - **Gate.** Replace `Bash(npm test:*)` with this project's Gate commands, one entry each: for example `Bash(npm run typecheck:*)`, `Bash(cargo test:*)`, `Bash(pytest:*)`, `Bash(make check:*)`. The Implementer may also run single test files while it works, so allow your test runner's direct command too (for example `Bash(node --test:*)`).
 
 Do not add `Bash(git push:*)`, `Bash(git reset:*)` or a blanket `Bash`. Push, PR creation and cleanup are offered to you at the end of a run, never done by it.

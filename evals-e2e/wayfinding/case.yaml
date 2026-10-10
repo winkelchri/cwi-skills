@@ -1,0 +1,115 @@
+schema_version: "1.0"
+name: wayfinding
+description: >
+  /sdd on a folder that holds a wayfinding map.md and no implementation tickets. The map has
+  two research tickets (01, 02), an agent-doable task (03), a grilling ticket blocked by 02
+  (04) and a prototype ticket (05). /sdd must follow the upstream wayfinder skill read by
+  path, resolve 01 and 02 with Scouts in parallel and 03 with one Scout, write each answer
+  into its ticket and a line per ticket into the map's Decisions so far, never work 04 or 05
+  but list them as Checkpoint items in the Ledger, commit nothing and switch no branch.
+  Headless runs have no AskUserQuestion, and wayfinding Checkpoints need a live session
+  anyway, so the run stops there. Grades end state only.
+  Needs Bash, so it lives outside the default evals/ suite. Run it with:
+  claude plugin eval . --trust-plugin --eval-dir evals-e2e --case wayfinding --scaffold --allow-tools Bash Write Edit --ablation none
+tags: [e2e]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: /sdd demo
+  max_turns: 80
+  timeout_seconds: 2400
+  allowed_tools: [Bash, Read, Write, Edit, Glob, Grep, Agent, Skill, ToolSearch]
+runs: 1
+graders:
+  - type: tool_used
+    name: upstream-wayfinder-read-by-path
+    tool: Read
+    input_match: 'mattpocock-skills/[^/]+/skills/.*wayfinder/SKILL\.md'
+    min: 1
+  - type: tool_used
+    name: scouts-dispatched
+    tool: Agent
+    input_match: 'cwi-skills:scout'
+    min: 3
+  - type: tool_used
+    name: research-skill-used
+    tool: Skill
+    input_match: 'mattpocock-skills:research'
+    min: 1
+  - type: tool_used
+    name: hitl-tickets-never-worked
+    tool: Agent
+    input_match: 'runs/0[45]-brief'
+    max: 0
+  - type: regex
+    name: research-01-resolved
+    target: {source: file, path: .scratch/demo/issues/01-normalization-form.md}
+    pattern: 'Status:\**\s*resolved[\s\S]*## Answer|## Answer[\s\S]*Status:\**\s*resolved'
+  - type: regex
+    name: research-02-resolved
+    target: {source: file, path: .scratch/demo/issues/02-transliteration-library.md}
+    pattern: 'Status:\**\s*resolved[\s\S]*## Answer|## Answer[\s\S]*Status:\**\s*resolved'
+  - type: regex
+    name: task-03-resolved
+    target: {source: file, path: .scratch/demo/issues/03-title-survey.md}
+    pattern: 'Status:\**\s*resolved[\s\S]*## Answer|## Answer[\s\S]*Status:\**\s*resolved'
+  - type: regex
+    name: findings-01-written
+    target: {source: file, path: .scratch/demo/research/01-normalization-form.md}
+    pattern: 'NFKD'
+  - type: regex
+    name: findings-02-written
+    target: {source: file, path: .scratch/demo/research/02-transliteration-library.md}
+    pattern: 'polyglot-ascii'
+  - type: regex
+    name: map-decision-01
+    target: {source: file, path: .scratch/demo/map.md}
+    pattern: '## Decisions so far(?:(?!\n## )[\s\S])*issues/01-normalization-form\.md'
+  - type: regex
+    name: map-decision-02
+    target: {source: file, path: .scratch/demo/map.md}
+    pattern: '## Decisions so far(?:(?!\n## )[\s\S])*issues/02-transliteration-library\.md'
+  - type: regex
+    name: map-decision-03
+    target: {source: file, path: .scratch/demo/map.md}
+    pattern: '## Decisions so far(?:(?!\n## )[\s\S])*issues/03-title-survey\.md'
+  - type: regex
+    name: grilling-ticket-untouched
+    target: {source: file, path: .scratch/demo/issues/04-unknown-script-fallback.md}
+    pattern: 'Status:\**\s*open'
+  - type: regex
+    name: prototype-ticket-untouched
+    target: {source: file, path: .scratch/demo/issues/05-mixed-script-look.md}
+    pattern: 'Status:\**\s*open'
+  - type: regex
+    name: no-commits
+    target: {source: file, path: .git/logs/HEAD}
+    pattern: '\tcommit'
+    match: count:1
+  - type: regex
+    name: stays-on-main
+    target: {source: file, path: .git/HEAD}
+    pattern: 'refs/heads/main'
+  - type: llm
+    name: research-in-parallel
+    focus: trace
+    criteria: >
+      The Operator (top-level agent) dispatched the Scouts (subagent_type cwi-skills:scout) for
+      tickets 01 and 02 in the same assistant turn, as parallel Agent tool calls, and the Scout
+      for ticket 03 in a later turn of its own.
+  - type: llm
+    name: ledger
+    focus: {source: file, path: .scratch/demo/ledger.md}
+    criteria: >
+      The Ledger says it is a wayfinding run, names a Wayfinder skill path under the installed
+      mattpocock-skills plugin cache, records tickets 01, 02 and 03 as resolved, and has open
+      (unticked) Checkpoint items for ticket 04 (grilling) and ticket 05 (prototype). It records
+      no Gate and no run branch.
+  - type: llm
+    name: checkpoint-presented
+    focus: last_message
+    criteria: >
+      The final message says the run stopped at a Checkpoint (not that the map is clear), names
+      the grilling ticket "Fallback for unmappable titles" and the prototype ticket "Look of
+      mixed-script slugs" by their titles, and tells the human to settle them in a live
+      /wayfinder session.
