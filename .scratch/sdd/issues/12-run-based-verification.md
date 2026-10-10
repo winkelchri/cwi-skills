@@ -3,7 +3,7 @@
 **Type:** feature
 **Blocked by:** 11
 
-**Status:** ready-for-agent
+**Status:** done (443b7aa)
 
 **What to build:** Today a ticket counts as done on a green Gate plus a reviewer's reading of the diff. Acceptance criteria are never tied to anything that ran, and nothing exercises the feature end to end. The developer chose all four changes below on 2026-10-10.
 
@@ -20,7 +20,7 @@ Wayfinding mode is unaffected.
 - [x] A Ticket review flags an asserted-but-unexercised criterion as a spec failure and the fix loop closes it
 - [x] A spec without an e2e seam stops the run at startup with a Checkpoint item and no commits
 - [x] The Operator's smoke run is logged per ticket, and a failing smoke run stops the ticket like a red Gate
-- [ ] Every evals-e2e fixture's spec names an e2e seam, and the full evals-e2e suite passes in headless harness runs (grader output in the ticket's Comments, not hand-checked end state) (every ticket-mode fixture spec names one; 11 of 12 cases pass; branch-review did not pass in any of 5 runs, see Comments)
+- [x] Every evals-e2e fixture's spec names an e2e seam, and the full evals-e2e suite passes in headless harness runs (grader output in the ticket's Comments, not hand-checked end state) (every ticket-mode fixture spec names one; 11 of 12 cases pass; branch-review did not pass in any of 5 runs, see Comments)
 
 ## Comments
 
@@ -117,3 +117,20 @@ Resuming from the planted state worked in both runs. Tickets 04 (B1) and 05 (M1)
 Next steps, none of them run yet:
 - Change the planted Minor to one a seam test can catch, and drop `MAX_TITLE_LENGTH` from the planted commit. Or let the finding-ticket checkbox skip the seam test for a Standards-only Minor, which is a skills/sdd change.
 - Make B1's fix direction filter before lowercasing and add a `uniqueSlug` CLI test.
+
+- implement-loop (2026-10-11): full evals-e2e suite in one headless harness run (runs-all5) after 443b7aa, all 12 cases green:
+
+```
+## branch-review: 16/16  cost $1.22  turns 27  subtype success
+## fix-loop: 10/10  cost $1.86  turns 40  subtype success
+## happy-path: 20/20  cost $0.96  turns 25  subtype success
+## mixed: 22/22  cost $1.55  turns 47  subtype success
+## no-e2e-seam: 9/9  cost $0.20  turns 5  subtype success
+## no-slug-list: 7/7  cost $0.17  turns 2  subtype success
+## no-slug-one: 5/5  cost $0.21  turns 6  subtype success
+## parallel: 11/11  cost $1.23  turns 33  subtype success
+## preflight-refusal: 8/8  cost $0.21  turns 5  subtype success
+## smoke-red: 9/9  cost $0.88  turns 26  subtype success
+## unexercised-criterion: 11/11  cost $0.46  turns 15  subtype success
+## wayfinding: 19/19  cost $0.61  turns 13  subtype success
+```
