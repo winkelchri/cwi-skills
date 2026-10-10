@@ -94,3 +94,26 @@ Reruns after fixes (re1: smoke-red, mixed, happy-path; re2–re5: branch-review)
   FAIL  ledger: Branch review line reads "filed none — round 2", not "clean after K re-reviews" or "capped after 3 re-reviews", and the open findings it cites were never re-reviewed; ticket 04's row (done, d7faa79..6
   FAIL  no-push-offered-only: Final message never offers pushing or opening a PR with commands, which the criteria require, though no forbidden git or gh command ran.
 ```
+
+2026-10-11, Implementer. branch-review now starts from a planted first Branch review: `scaffold.sh` writes `runs/branch-review-0.md` (one unambiguous B1 for the hyphen and `untitled` rules, one Minor M1 for the unused `MAX_TITLE_LENGTH`) and its brief, and sets the Ledger's `Branch review:` line to `filing — round 0`, with `Mode`, `Parallel`, `E2E seam` lines and the seam Ruling. The fixture CLI is the happy-path one, which parses only arguments starting with `[` or `{` as JSON. The scaffold checks this. The dispatch grader now counts re-reviews only (1–3). Two parallel runs (t12a, t12b) for $3.57:
+
+```
+[t12a]
+## branch-review: 13/14  cost $1.69  turns 1  subtype success
+  FAIL  no-push-offered-only: No push, PR, branch-delete, or worktree-remove ran, but the final message only explains a hung setup command and a deleted `/tmp/dummy`. It omits the push/PR options, the cleanup offer, the Rulings, a
+[t12b]
+## branch-review: 11/14  cost $1.88  turns 31  subtype success
+  FAIL  final-gate-ran: file missing
+  FAIL  ledger: FAIL. The `Branch review:` line reads "filed 12 — round 2 — …", not "clean after K re-reviews" or "capped after 3 re-reviews". Ticket 04's row does meet its part: done, commit range a22acf7..edc1b9e,
+  FAIL  no-push-offered-only: FAIL: No push, PR, branch-delete, or worktree-remove command ran, and cleanup is correctly reported as unneeded, but the final message never offers pushing or opening a PR with commands, which the cri
+```
+
+Resuming from the planted state worked in both runs. Tickets 04 (B1) and 05 (M1) were filed from `branch-review-0.md`, and round 0 was not dispatched again. The runs failed for these reasons:
+
+- t12a reached the Final Checkpoint (`clean after 2 re-reviews`). Then a late background-task notification arrived, from a setup command that hung on a stray `cat >`. The Operator's reply to it replaced the Final Checkpoint message as the run's result.
+- t12b: the finding-ticket template requires "a test at the spec's seam that would have caught it". An unused constant (M1) cannot be caught that way. Ticket 05's reviewer asked for one anyway, and the Implementer wrote a test that greps the source text. Re-review 1 flagged that test as B2, which became decision ticket 11. The run stopped at its Checkpoint.
+- Both runs: re-review 1 found the same two real gaps the planted B1 does not name. First, lowercasing before filtering lets some non-ASCII uppercase letters through. Second, there is no CLI test for `uniqueSlug` on a no-letter title. Each cost an extra fix wave.
+
+Next steps, none of them run yet:
+- Change the planted Minor to one a seam test can catch, and drop `MAX_TITLE_LENGTH` from the planted commit. Or let the finding-ticket checkbox skip the seam test for a Standards-only Minor, which is a skills/sdd change.
+- Make B1's fix direction filter before lowercasing and add a `uniqueSlug` CLI test.

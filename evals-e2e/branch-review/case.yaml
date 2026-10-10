@@ -1,19 +1,22 @@
 schema_version: "1.0"
 name: branch-review
 description: >
-  Resumes a run whose three tickets are all done on sdd/demo, just before the Branch review.
-  The spec says a slug holds only single hyphens, never starts or ends with "-", and is
-  "untitled" for a title with no letters or digits; no ticket repeats those rules, and the
-  planted commits follow the tickets literally, so slugify("- Hello -") returns "--hello--". The Branch review (code-review on Opus) must
-  catch it and file a bug ticket 04 (Type bug, Found by branch review, ready-for-agent);
-  its Minor findings become tickets too. They go through the normal loop; the Branch
-  reviewer then re-reviews the whole branch after each fix wave until a re-review is clean,
-  at most 3 times; the run reaches the Final Checkpoint with the Gate green and pushes
-  nothing. Ticket 03's planted commit declares an unused MAX_TITLE_LENGTH constant, a
-  Minor that must be filed as a ticket. The spec settles accented letters (dropped), so no
-  finding needs the human and the run can reach the Final Checkpoint headless. Headless runs have no AskUserQuestion,
-  so the Final Checkpoint offers push, PR and cleanup in the final message and performs
-  none. Grades end state only.
+  Resumes a run interrupted right after its first Branch review returned: tickets 01-03 are
+  done on sdd/demo and the Ledger's `Branch review:` line is at `filing — round 0`, with no
+  ticket filed yet. The spec says a slug holds only single hyphens, never starts or ends with
+  "-", and is "untitled" for a title with no letters or digits; no ticket repeats those
+  rules, and the planted commits follow the tickets literally, so slugify("- Hello -")
+  returns "--hello--". Ticket 03's planted commit declares an unused MAX_TITLE_LENGTH
+  constant. The planted review (planted/branch-review-0.md) reports both, as one
+  unambiguous finding B1 and one Minor M1, and no judgement call, so the run never needs
+  the human: the live first review classified findings as judgement calls on some runs,
+  which stopped the headless run at a Checkpoint. On resume the Operator files bug ticket
+  04 (B1) and a ticket for M1 (Type bug, Found by branch review, ready-for-agent) and builds
+  them through the normal loop; a live Branch reviewer (code-review on Opus) then
+  re-reviews the whole branch after each fix wave until a re-review is clean, at most 3
+  times. The run reaches the Final Checkpoint with the Gate green and pushes nothing.
+  Headless runs have no AskUserQuestion, so the Final Checkpoint offers push, PR and
+  cleanup in the final message and performs none. Grades end state and traces.
   Needs Bash, so it lives outside the default evals/ suite. Run it with:
   claude plugin eval . --trust-plugin --eval-dir evals-e2e --case branch-review --scaffold --allow-tools Bash Write Edit --ablation none
 tags: [e2e]
@@ -27,11 +30,11 @@ execution:
 runs: 1
 graders:
   - type: tool_used
-    name: review-and-up-to-three-re-reviews
+    name: one-to-three-re-reviews
     tool: Agent
     input_match: 'cwi-skills:branch-reviewer'
-    min: 2
-    max: 4
+    min: 1
+    max: 3
   - type: llm
     name: minor-filed
     focus: trace

@@ -1,11 +1,15 @@
 #!/bin/bash
 # Builds the branch-review fixture repo in the eval workspace (the current directory): the
 # happy-path project with all three tickets already done on sdd/demo, as a /sdd run leaves it
-# just before its Branch review. This case's spec adds a rule that no ticket repeats: a slug
-# never starts or ends with "-". The planted commits follow the tickets literally, so
-# slugify("- Hello -") returns "-hello-". Each ticket passed review alone; the rule spans them.
-# Ticket 03's commit also declares an unused MAX_TITLE_LENGTH constant: a Minor finding
-# that must become a ticket of its own.
+# when interrupted right after its first Branch review returned, before filing any ticket.
+# This case's spec adds rules that no ticket repeats: a slug holds only single hyphens, never
+# starts or ends with "-", and is "untitled" for a title with no letters or digits. The
+# planted commits follow the tickets literally, so slugify("- Hello -") returns "--hello--".
+# Each ticket passed review alone; the rules span them. Ticket 03's commit also declares an
+# unused MAX_TITLE_LENGTH constant. The planted Branch review (planted/branch-review-0.md)
+# reports both: one unambiguous finding B1 and one Minor M1, no judgement call, so the
+# headless run never needs the human. The Ledger's `Branch review:` line is at `filing`, so
+# the resumed run files tickets from that review, then live re-reviews follow.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 cp -R "$here/../happy-path/fixture/." .
@@ -104,14 +108,28 @@ test("slug uniqueSlug prints the first free slug", () => {
 JS
 commit 01 "feat: add uniqueSlug"
 
+head="$(git rev-parse HEAD)"
+skills="$(ls -d "$HOME"/.claude/plugins/cache/*/mattpocock-skills/*/skills 2>/dev/null | sort -V | tail -1)"
+mkdir -p .scratch/demo/runs
+for f in branch-review-brief-0.md branch-review-0.md; do
+  sed -e "s|<base>|$base|" -e "s|<skills>|$skills|" "$here/planted/$f" > .scratch/demo/runs/"$f"
+done
+# The fixture CLI must JSON-parse only arguments that start with [ or {, so a title such as 2024
+# stays a string.
+grep -qF '/^[[{]/' bin/slug.js
+
 cat > .scratch/demo/ledger.md <<LEDGER
 # Ledger — demo
 
 ## Run
 
+- Mode: ticket
 - Branch: sdd/demo (base $base)
+- Parallel: off
 - Gate: \`npm test\`
-- Skills root: $(ls -d "$HOME"/.claude/plugins/cache/*/mattpocock-skills/*/skills 2>/dev/null | sort -V | tail -1)
+- E2E seam: \`node --test test/cli.test.js\`
+- Skills root: $skills
+- Branch review: filing — round 0 — .scratch/demo/runs/branch-review-0.md — wave base $head
 
 ## Tickets
 
@@ -123,6 +141,7 @@ $(cat "$rows")
 
 - Gate is \`npm test\` — CLAUDE.md names it, no typecheck — cost if wrong: broken work counted as done
 - Switched from \`main\` to \`sdd/demo\` — run started on the default branch — cost if wrong: commits land on a branch to merge
+- E2E seam is \`node --test test/cli.test.js\` — spec Testing Decisions, runs the CLI as a user does — cost if wrong: work counted as done that no user path exercises
 
 ## Checkpoints
 
