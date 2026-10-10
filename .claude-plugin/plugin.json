@@ -1,0 +1,9 @@
+{
+  "name": "cwi-skills",
+  "version": "0.1.0",
+  "description": "Personal Claude Code plugin. Provides /sdd (subagent-driven development): an Operator chat that drives a feature from tickets to reviewed commits through fresh subagents.",
+  "author": {
+    "name": "Christopher Winkelmann"
+  },
+  "keywords": ["sdd", "subagents", "tdd", "code-review"]
+}
