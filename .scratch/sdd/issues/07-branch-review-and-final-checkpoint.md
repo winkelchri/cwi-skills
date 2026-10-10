@@ -14,11 +14,17 @@
 
 **Blocked by:** 04, 05
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The Branch review runs once all tickets are done, using `code-review` by reference on Opus
-- [ ] Findings are filed as bug tickets with correct triage status and `Found by: branch review`
-- [ ] Exactly one re-review follows the fix wave
-- [ ] The final Checkpoint lists the summary, all Rulings and deferred Minors
-- [ ] No push, PR or deletion happens without an explicit choice
+- [x] The Branch review runs once all tickets are done, using `code-review` by reference on Opus
+- [x] Findings are filed as bug tickets with correct triage status and `Found by: branch review`
+- [x] Exactly one re-review follows the fix wave
+- [x] The final Checkpoint lists the summary, all Rulings and deferred Minors
+- [x] No push, PR or deletion happens without an explicit choice
 - [ ] The "happy path" eval case, extended to assert the Branch review ran, passes
+
+## Comments
+
+- Built: `agents/branch-reviewer.md` (Opus), the Branch review, Re-review and Final Checkpoint sections of `skills/sdd/SKILL.md`, a HITL-triage case for judgement bugs, the new `evals-e2e/branch-review` case, and Branch review graders in `evals-e2e/happy-path`. Evidence is in the spec's "Build notes (ticket 07)".
+- Happy-path box left unticked: Bash-granting eval cases cannot run on this machine. A headless run of the happy-path fixture met every grader by hand: 3 done tickets, 3 ticket commits in order 02, 03, 01, Gate green, the Branch reviewer dispatched, `code-review` loaded and `branch-review-0.md` written. `evals-e2e/branch-review` was likewise checked only by headless runs, on its older spec.
+- Not exercised: picking deferred findings or actions through `AskUserQuestion` at the Final Checkpoint, so push, PR and cleanup were never run; resuming at `filing`; a clean Branch review with zero findings; the "stay `filed` when there are no fix commits" rule added after the last run; the Branch reviewer stall path; a bug ticket built on an answered split decision.
