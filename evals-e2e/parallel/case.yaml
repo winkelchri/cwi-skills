@@ -39,7 +39,7 @@ graders:
   - type: regex
     name: dependent-after-merges
     target: {source: file, path: .git/logs/HEAD}
-    pattern: 'merge: ticket 0[12] from[\s\S]*merge: ticket 0[12] from[\s\S]*\(ticket 03\)'
+    pattern: 'merge: ticket 0[12] from[\s\S]*merge: ticket 0[12] from[\s\S]*(\(ticket 03\)|merge: ticket 03 from)'
   - type: tool_used
     name: worktree-implementers
     tool: Agent
