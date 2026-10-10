@@ -2,12 +2,12 @@
 name: sdd
 description: Subagent-driven development. Run as the Operator over .scratch/<slug>/ and drive its tickets to committed code through fresh Implementer subagents, or work a wayfinding map's agent-doable tickets until the way is clear.
 disable-model-invocation: true
-argument-hint: <slug>
+argument-hint: <slug> [--parallel]
 ---
 
-You are the **Operator** for the feature folder `.scratch/$ARGUMENTS/` (below: `<dir>`, and `<slug>` is `$ARGUMENTS`). You dispatch, verify and keep the books. Every code change comes from an Implementer subagent; you check its claims yourself and record the outcome.
+Arguments: `$ARGUMENTS`. The first word is `<slug>`; `--parallel` after it opts this session into [parallel tickets](#parallel-tickets). You are the **Operator** for the feature folder `.scratch/<slug>/` (below: `<dir>`). You dispatch, verify and keep the books. Every code change comes from an Implementer subagent; you check its claims yourself and record the outcome.
 
-No slug given → reply `Usage: /sdd <slug>` and stop.
+No slug given → reply `Usage: /sdd <slug> [--parallel]` and stop.
 
 ## Ground rules
 
@@ -19,7 +19,7 @@ No slug given → reply `Usage: /sdd <slug>` and stop.
   The human's explicit pick at the [Final Checkpoint](#final-checkpoint) is the only exception, and it covers the Operator alone.
 
 - **Ruling**: any judgement call you make without the human goes into the Ledger as `<what> — <why> — <cost if wrong>`.
-- **Checkpoint item**: anything only the human can settle — a decision ticket, a prototype's variants to choose from, an escalated ticket, an ambiguous Gate. Record each as an open line under `## Checkpoints` in the Ledger: `- [ ] <id> — <question> — <context path>`, where `<id>` is the ticket number and kind (`05 decision`, `05 prototype`, `03 NEEDS_CONTEXT`, `03 stuck`) or `Gate`. Items wait for the next [Checkpoint](#checkpoint); only startup items are asked at once, because no work can start without them.
+- **Checkpoint item**: anything only the human can settle — a decision ticket, a prototype's variants to choose from, an escalated ticket, an ambiguous Gate. Record each as an open line under `## Checkpoints` in the Ledger: `- [ ] <id> — <question> — <context path>`, where `<id>` is the ticket number and kind (`05 decision`, `05 prototype`, `03 NEEDS_CONTEXT`, `03 stuck`, `03 merge check`) or `Gate`. Items wait for the next [Checkpoint](#checkpoint); only startup items are asked at once, because no work can start without them.
 - **Notifications** — `PushNotification`, loaded through ToolSearch if it is deferred — go out for exactly three events: Checkpoint items waiting, run done, run stalled. Nothing else notifies. A notification tool that is missing, or answers that it did not send, changes nothing: carry on.
 - **Asking** uses `AskUserQuestion`. If that tool is unavailable (headless runs), the items stay open in the Ledger and the run stops at the Checkpoint. A missing tool is a Checkpoint, never an error.
 
@@ -32,12 +32,13 @@ Each check below can refuse the run. A refusal stops before any ticket is claime
 
    > `.scratch/<slug>/` holds neither tickets nor a wayfinding map. Plan the feature first: `/to-spec` then `/to-tickets` for a feature you can describe, or `/wayfinder` to map an effort that is still unclear. Then run `/sdd <slug>` again.
 
-3. **Ledger.** `<dir>/ledger.md` exists and its `Mode:` line matches this run's mode (no `Mode:` line means ticket mode) → this is a resumed run. A Ledger from the other mode is left over from an earlier stage of this effort, typically the map that led to these tickets: rename it to `<dir>/ledger-<its mode>.md` and start a fresh one. On a resumed run in ticket mode: reuse its branch and Gate, and take the Ledger and the tickets' `Status:` lines as they stand. Done tickets are never worked again; open Checkpoint items wait for the next Checkpoint, except an open `Run stalled` item, which this restart answers: tick it. A Ledger left by a run that aborted at startup records no run branch yet; step 8 still applies. If the current branch is a `prototype/*` branch, an interrupted [prototype build](#build-a-prototype) left it: with the tree clean outside `<dir>`, switch back to the Ledger's run branch; otherwise stop and name the uncommitted paths. With no Ledger to resume, create it from [the template](#ledger-template) for the run's mode.
+3. **Ledger.** `<dir>/ledger.md` exists and its `Mode:` line matches this run's mode (no `Mode:` line means ticket mode) → this is a resumed run. A Ledger from the other mode is left over from an earlier stage of this effort, typically the map that led to these tickets: rename it to `<dir>/ledger-<its mode>.md` and start a fresh one. On a resumed run in ticket mode: a merge left in progress by an interrupted [Merge check](#merge-check) (`git rev-parse -q --verify MERGE_HEAD` prints a sha) is undone first with `git merge --abort`, recorded as a Ruling; its ticket's Ledger outcome is still `built`, so it is merged again. Reuse its branch and Gate, and take the Ledger and the tickets' `Status:` lines as they stand. Done tickets are never worked again; open Checkpoint items wait for the next Checkpoint, except an open `Run stalled` item, which this restart answers: tick it. A Ledger left by a run that aborted at startup records no run branch yet; step 8 still applies. If the current branch is a `prototype/*` branch, an interrupted [prototype build](#build-a-prototype) left it: with the tree clean outside `<dir>`, switch back to the Ledger's run branch; otherwise stop and name the uncommitted paths. With no Ledger to resume, create it from [the template](#ledger-template) for the run's mode.
 4. **Skills root.** Record the newest `~/.claude/plugins/cache/*/mattpocock-skills/<version>/skills/` in the Ledger, by version order (`ls -d ~/.claude/plugins/cache/*/mattpocock-skills/*/skills | sort -V | tail -1`), never a copy (ADR-0001: user-only upstream skills are read by path from there). In wayfinding mode also record `Wayfinder skill:`, the path `find <skills root> -name SKILL.md -path '*/wayfinder/*'` prints. A resumed run re-resolves both, so an upstream update reaches it, and updates the Ledger if they moved.
 5. **Gate** — the project's typecheck plus full test suite. Look in `CLAUDE.md`, `AGENTS.md`, then manifests (`package.json` scripts, `Makefile`, `pyproject.toml`, `Cargo.toml`, `go.mod`). One clear set of commands → use it. Conflicting candidates, or none → ambiguous: ask now with `AskUserQuestion`, one option per candidate (no tool → record the `Gate` item and stop). Record the chosen Gate as a Ruling naming its source, for example: Gate is `npm test` — package.json "test" script, no typecheck configured — cost if wrong: broken work counted as done.
 6. **Gate on the allowlist.** Only with a preflight note from step 1: every Gate command must match one of its allowed Bash entries (`Bash(npm test:*)` covers `npm test`). Any missing → stop, name the entries to add to `.claude/settings.local.json`, and point the user to `${CLAUDE_SKILL_DIR}/permissions.md` (give the path, don't read it). The run would otherwise stall on the first Gate run inside an Implementer.
 7. **Gate is green.** Run the Gate on the current branch, output saved to `<dir>/runs/gate-start.log`. Red → abort: claim nothing, switch no branch, dispatch nothing. Record under `## Checkpoints` in the Ledger: `- [ ] Gate — red at start (<command>: <failing summary>) — fix it, then run /sdd <slug> again`. On a resumed run whose Gate is now green, tick any such open item (`- [x]`). Reply with the failing command and the decisive lines of its output, and stop. A red Gate at start would make failures from new work indistinguishable from existing ones.
 8. **Branch.** Note the current branch. On `main`, `master` or the repo's default branch, switch to `sdd/<slug>` (create it with `git switch -c` if missing) and record that as a Ruling. Record the branch and `git rev-parse HEAD` as the run's base.
+9. **Parallel.** Set `- Parallel: on` in `## Run` when this session was given `--parallel`, otherwise `- Parallel: off`; every session sets it afresh. Sequential is the default: with `off`, the [parallel tickets](#parallel-tickets) section never applies, except to finish a merge an interrupted parallel run left (a `built` Ledger outcome).
 
 ## Pick the next ticket
 
@@ -46,9 +47,13 @@ For each ticket read its number `NN` (filename prefix), its `Status:` line, its 
 1. **HITL triage.** Every `ready-for-human` ticket without `Type: decision` or `Type: prototype` goes through [HITL triage](#hitl-triage) first, blocked or not.
 2. **Prototype tickets** need no triage: building the prototype is agent work, choosing a variant is the human's. A `Type: prototype` ticket that is `ready-for-human` and has no `## Prototype` section yet is set to `ready-for-agent`.
 3. **Offline answers.** A `Type: decision` ticket, or a `Type: prototype` ticket with a `## Prototype` section, that has an `## Answer` section and whose status is not yet `done` was answered outside the run (answers are appended at the end of the file, so find them with `grep -l '^## Answer' <dir>/issues/*.md`, never from a partial read): set its `Status:` to `done (decision)` or `done (prototype)`, update a prototype's Ledger row to outcome `done` with the chosen variant, and tick its Ledger item. That counts as progress.
-4. **Workable.** A ticket is workable when its status is `ready-for-agent` (or `claimed` with no Ledger outcome, left over from an interrupted run), every blocker's status starts with `done`, and its Ledger outcome is absent or `reopened`. Take the lowest-numbered workable ticket. Dependencies set the order, never numbering alone. Tickets blocked by an open decision, an unchosen prototype or an escalated ticket stay untouched; everything else keeps running. A workable `Type: prototype` ticket goes to [Build a prototype](#build-a-prototype), every other one to [Work one ticket](#work-one-ticket).
+4. **Workable.** A ticket is workable when its status is `ready-for-agent` (or `claimed` with no Ledger outcome, or with outcome `building in worktree`, left over from an interrupted run), every blocker's status starts with `done`, and its Ledger outcome is absent or `reopened`. Take the lowest-numbered workable ticket. Dependencies set the order, never numbering alone. Tickets blocked by an open decision, an unchosen prototype or an escalated ticket stay untouched; everything else keeps running. A workable `Type: prototype` ticket goes to [Build a prototype](#build-a-prototype), every other one to [Work one ticket](#work-one-ticket).
 
 A `claimed` ticket whose Ledger outcome is `in review` was interrupted after its build commit passed verification: it comes before any workable ticket. Resume it in the [review and fix loop](#review-and-fix-loop) with `base` from its Ledger row: no `<dir>/runs/NN-review-*.md` yet → step 1 with `R = 0`; otherwise take its newest review `NN-review-R.md` and act on that review's verdict line from step 5. Its Implementer cannot be resumed, so its fix rounds 1–3 go to a fresh Sonnet Implementer.
+
+A `claimed` ticket whose Ledger outcome is `built — <branch>` was built in a worktree by an interrupted parallel run and never merged: it comes first, before any `in review` ticket. Take it, lowest number first, straight to the [Merge check](#merge-check) with that branch.
+
+**Parallel batch.** With `Parallel: on`, look at the workable tickets before taking the lowest-numbered one. Two or more of them that are not `Type: prototype` and have no blocking path between them → [work them in parallel](#parallel-tickets) instead. Fewer than two → carry on one ticket at a time, exactly as with `Parallel: off`.
 
 Nothing workable → [Checkpoint](#checkpoint).
 
@@ -98,7 +103,7 @@ A `Type: decision` ticket whose blockers are all done becomes a Checkpoint item:
 A prototype ticket asks a question best answered by trying throwaway code. An Implementer builds the variants with `mattpocock-skills:prototype` on a branch of their own; the human compares them at a Checkpoint and picks one. Prototype code never lands on the run branch. It gets no Ticket review: it is throwaway, and the human judges it.
 
 1. **Claim.** Set its `Status:` to `claimed`. `<name>` is the rest of the ticket's filename (`05-separator.md` → `separator`). Note `run = git rev-parse HEAD` on the run branch.
-2. **Branch.** The working tree must be clean outside `<dir>` (`git status --porcelain -- . ':!<dir>'` prints nothing). Switch to `prototype/<name>`: `git switch -c prototype/<name>`, or `git switch prototype/<name>` if an interrupted attempt left it. Note `base = git rev-parse HEAD`.
+2. **Branch.** The working tree must be clean outside `<dir>` (`git status --porcelain -- . ':!<dir>' ':!.claude/worktrees'` prints nothing; worktrees of [parallel tickets](#parallel-tickets) live under `.claude/worktrees/`). Switch to `prototype/<name>`: `git switch -c prototype/<name>`, or `git switch prototype/<name>` if an interrupted attempt left it. Note `base = git rev-parse HEAD`.
 3. **Brief.** Write `<dir>/runs/NN-brief.md` as in [Work one ticket](#work-one-ticket), with these differences: it is a **prototype brief**; the branch is `prototype/<name>`, which already exists and is checked out; the commit subject format is `prototype: <summary> (ticket NN)`; there is no Gate to run; the report must end with a `## Checkpoint` section giving `Branch:`, `Run:` (one command or one file to open, from the repo root, after `git switch prototype/<name>`) and `Variants:` (each variant's name and what it shows).
 4. **Dispatch** one fresh Implementer as in Work one ticket, prompt `Brief: <brief path>. Build this prototype.`
 5. **Verify**, whatever the report claims:
@@ -139,6 +144,48 @@ Every ticket passes a Ticket review before it counts as done. Diffs, reviews and
 
 Tell the user one line per review: `NN review R: <verdict line>`.
 
+## Parallel tickets
+
+Only with `Parallel: on`. Independent tickets are built at the same time, each by its own Implementer in its own git worktree; then, one at a time, each is merged back onto the run branch, passes a [Merge check](#merge-check) and gets its Ticket review there.
+
+1. **Batch.** Go through the workable tickets that are not `Type: prototype`, lowest number first, and take each one that has no blocking path to or from a ticket already taken, up to three. A blocking path from A to B exists when following `Blocked by:` lines from B, through tickets of any status, reaches A. Fewer than two taken → back to [Pick the next ticket](#pick-the-next-ticket) and take the lowest-numbered one alone.
+2. **Claim** each: `Status: claimed`, Ledger row with outcome `building in worktree`. The working tree must be clean outside `<dir>` (`git status --porcelain -- . ':!<dir>' ':!.claude/worktrees'` prints nothing). Note `run = git rev-parse HEAD`: every worktree starts from it.
+3. **Briefs.** Write `<dir>/runs/NN-brief.md` for each as in [Work one ticket](#work-one-ticket), with these differences: it is a **worktree brief**; every path in it is absolute, because the worktree is a fresh checkout without the uncommitted State files; the branch is the worktree's own, already checked out; there is no report path, because a worktree agent can write only inside its worktree: the report comes back as its final message.
+4. **Dispatch** every Implementer of the batch in one message, so they run in parallel: Agent tool, `subagent_type: cwi-skills:implementer`, `isolation: "worktree"`, in the foreground, prompt `Brief: <absolute brief path>. Work this ticket in your worktree.` Each result names its `worktreePath` and `worktreeBranch`; a result without them made no change, and its worktree is gone. Save each final message, which is the full report, to `<dir>/runs/NN-report.md`: reviews read the report from there.
+5. **Check the run branch.** `git branch --show-current` is still the run branch and `git rev-parse HEAD` still equals `run`. Anything else means an Implementer committed outside its worktree: [stop as stalled](#stalls), naming the commits.
+6. **Verify** each ticket of the batch, in number order, whatever its report claims:
+   - its status is `DONE` or `DONE_WITH_CONCERNS`
+   - exactly one new commit on its branch: `git rev-list --count <run>..<branch>` is `1`
+   - that commit touches nothing under `<dir>`: `git diff --name-only <run> <branch>`
+   - its worktree is clean: `git -C <worktreePath> status --porcelain` prints nothing
+
+   The Gate is not run here: the Merge check runs it on the merged result.
+
+   | Outcome | Ticket `Status:` | Ledger row | Checkpoint item |
+   |---|---|---|---|
+   | passes | stays `claimed` | outcome `built — <branch>`, commits `<run>..<branch>`, worktree path, any concerns | none |
+   | no worktree branch or no new commit | back to `ready-for-agent` | the status and reason (verbatim for `BLOCKED` / `NEEDS_CONTEXT`) | `- [ ] NN <status> — <what the human must supply> — <report path>` |
+   | any other failed check | back to `ready-for-agent` | the failed check, the branch and its range | `- [ ] NN parallel check failed — <check>; work on <branch> — <report path>` |
+
+   A ticket that fails here never touched the run branch, so the run carries on. Tell the user one line per ticket: `NN <title>: <built on <branch> | outcome>`.
+7. **Merge back** each `built` ticket, in number order: its [Merge check](#merge-check), then, if that passes, its [review and fix loop](#review-and-fix-loop), before the next ticket's merge. [Count the attempt](#stalls) of every ticket in the batch, in number order, once its outcome is known. Then pick the next ticket.
+
+### Merge check
+
+A ticket built in a worktree counts only once its work sits on the run branch and the Gate is green there. The merge never commits on its own, so a failed Merge check is undone with `git merge --abort` and the run branch is never left red.
+
+1. **Merge.** The tree is clean outside `<dir>` (the pathspec from step 2 above). Note `pre = git rev-parse HEAD`. Run `git merge --no-ff --no-commit <branch>`.
+2. **Attempt 1.**
+   - **Conflicts** (`git diff --name-only --diff-filter=U` prints paths) → write `<dir>/runs/NN-merge-brief-1.md`: it is a **merge brief**; the ticket and spec paths, the branch being merged and `pre`, the conflicted paths, the Gate commands, the report path `<dir>/runs/NN-merge-report-1.md`, the skills root, and the safety rules, word for word. Dispatch one fresh Implementer (Agent tool, `subagent_type: cwi-skills:implementer`, no isolation, in the foreground), prompt `Merge brief: <path>. Resolve this merge.` It resolves with `mattpocock-skills:resolving-merge-conflicts`, runs the Gate and stages, but leaves the commit to you.
+   - **Check** whatever the report claims: no unmerged paths remain, `HEAD` is still `pre` with the merge in progress (`git rev-parse -q --verify MERGE_HEAD` prints a sha), nothing under `<dir>` is staged (`git diff --cached --name-only`), and the Gate is green when you run it, output to `<dir>/runs/NN-merge-check-1.log`. An Implementer that committed the merge itself, against its brief, leaves `HEAD` a merge of `pre` and the branch: accept that commit when everything else holds, and skip the commit in step 3.
+3. **Passed** → commit the merge: `git commit -m "merge: ticket NN from <branch> (merge check <attempt>)"`. Ledger row: outcome `in review`, commits `<pre>..HEAD`, notes `merge check passed at attempt <attempt> — <log path>`. Go to the [review and fix loop](#review-and-fix-loop) with `base = pre`. The worktree's Implementer cannot be resumed on the run branch, so fix rounds 1–3 go to a fresh Sonnet Implementer.
+4. **Attempt 2** (attempt 1 did not pass and the merge is still in progress). Write `<dir>/runs/NN-merge-brief-2.md` as above, plus attempt 1's outcome, log path and report path, report path `<dir>/runs/NN-merge-report-2.md`. Dispatch one fresh Implementer on Opus (`model: opus`), prompt `Merge brief: <path>. Make this merge pass the Gate.` Check as in step 2, log `<dir>/runs/NN-merge-check-2.log`. Passed → step 3.
+5. **Failed twice** → it becomes a Checkpoint item. `git merge --abort`, then check that `git rev-parse HEAD` equals `pre` and the tree is clean outside `<dir>`. The ticket stays `claimed`; Ledger row: outcome `merge failed — <reason>`, notes the branch and both log paths. Item: `- [ ] NN merge check — failed twice: <reason>; the work stays on <branch> — <newest log path>`. Tickets blocked by it wait; the rest of the run carries on.
+
+   If a merge was committed despite the brief and the Gate is red on the run branch, nothing can be undone without rewriting history: add the same item and [stop as stalled](#stalls).
+
+Tell the user one line per Merge check: `NN merge check: <passed at attempt K | failed twice> — <log path>`.
+
 ## Checkpoint
 
 Reached when nothing is workable. Checkpoints are held back until then, so the human is interrupted as rarely as possible. Agent work comes first, by the Ledger's `Branch review:` line in `## Run`:
@@ -153,7 +200,7 @@ Reached when nothing is workable. Checkpoints are held back until then, so the h
 4. **Ask** with `AskUserQuestion`: one question per item, at most four per call, calls back to back. Each question gives the context the human needs to decide without digging (the ticket or review path, what each option changes) and offers up to three answers plus `Defer`:
    - decision ticket → the options it names
    - prototype ticket → its variants (up to three; more go in as free text), with the branch and run instruction in the question
-   - `NEEDS_CONTEXT` / `BLOCKED` / `stuck` / `prototype check failed` ticket → `Retry with guidance` (the guidance comes as the free-text answer), `Wontfix`
+   - `NEEDS_CONTEXT` / `BLOCKED` / `stuck` / `prototype check failed` / `parallel check failed` / `merge check` ticket → `Retry with guidance` (the guidance comes as the free-text answer), `Wontfix`
    - `Gate` → the Gate candidates
 
    No `AskUserQuestion` → leave every item open and [Finish](#finish) as stopped at a Checkpoint.
@@ -218,7 +265,7 @@ Reached when every ticket's status starts with `done` or is `wontfix`, no Checkp
    - the run summary: each ticket's outcome, review verdict and commit range, the Branch review and re-review results with their paths, and the run's commit range `<base>..HEAD`
    - every Ruling from the Ledger
    - every line under `## Deferred findings`, numbered
-   - the actions offered: push the run branch, open a PR, delete the `prototype/*` branches and worktrees the run created. Give the exact command for each.
+   - the actions offered: push the run branch, open a PR, delete the `prototype/*` branches and the worktrees the run created, with their branches (the worktree paths and branches in the Ledger's rows: `git worktree remove <path>`, then `git branch -D <branch>`). Give the exact command for each.
 4. **Ask** with `AskUserQuestion`:
    - which deferred findings become tickets for one more wave (multi-select; with more than four, list them in the question and take the numbers as free text), or none
    - which offered actions to take (multi-select), or none
@@ -230,7 +277,7 @@ Reached when every ticket's status starts with `done` or is `wontfix`, no Checkp
 
 ## Stalls
 
-A **ticket attempt** is one pass through [Work one ticket](#work-one-ticket), including its review and fix loop, or through [Build a prototype](#build-a-prototype). It makes progress when the ticket ends `done`, or a prototype ends `prototype ready`; an answered Checkpoint also counts as progress. Keep a count of consecutive attempts without progress; progress resets it to zero. When it reaches 2, the run has stalled: stop as stalled instead of picking the next ticket. The count starts at zero in every session.
+A **ticket attempt** is one pass through [Work one ticket](#work-one-ticket), including its review and fix loop, or through [Build a prototype](#build-a-prototype). In a [parallel batch](#parallel-tickets) each ticket is one attempt, from its worktree build through its Merge check and review. It makes progress when the ticket ends `done`, or a prototype ends `prototype ready`; an answered Checkpoint also counts as progress. Keep a count of consecutive attempts without progress; progress resets it to zero. When it reaches 2, the run has stalled: stop as stalled instead of picking the next ticket. The count starts at zero in every session.
 
 **Stop as stalled**: add `- [ ] Run stalled — <reason> — <ledger rows or log path>` under `## Checkpoints`, notify `/sdd <slug>: run stalled — <reason>`, and [Finish](#finish). Re-running `/sdd <slug>` resumes from the Ledger.
 
@@ -247,7 +294,7 @@ Final message (after a Final Checkpoint, its presentation is this message, plus 
 - the deferred findings from the Ledger
 - every Ruling from the Ledger
 - the run's commit range `<base>..HEAD` and that State files are uncommitted
-- any `prototype/*` branches the run created, left in place unless the human picked their deletion at the Final Checkpoint: they are the prototypes' record, and deleting them is the human's call
+- any `prototype/*` branches and parallel worktrees (with their branches) the run created, left in place unless the human picked their deletion at the Final Checkpoint: they are the prototypes' record, and deleting them is the human's call
 
 ## Wayfinding mode
 
@@ -311,6 +358,7 @@ Ticket mode:
 
 - Mode: ticket
 - Branch: <branch> (base <sha>)
+- Parallel: <on | off>
 - Gate: `<command>`[, `<command>`]
 - Skills root: <path>
 - Branch review: <filing | filed MM–NN | clean | re-reviewed> — <paths, as the Branch review and Re-review sections give them>

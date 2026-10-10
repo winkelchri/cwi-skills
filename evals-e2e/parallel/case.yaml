@@ -1,0 +1,63 @@
+schema_version: "1.0"
+name: parallel
+description: >
+  /sdd demo --parallel on two independent tickets (01, 02) and a third (03) blocked by both.
+  01 and 02 must be built in parallel, each by an Implementer in its own worktree, then merged
+  back one at a time, each merge followed by a Merge check with a green Gate. Both tickets add
+  to src/slug.js and create test/slug.test.js, so the second merge conflicts and an Implementer
+  resolves it with resolving-merge-conflicts. 03 is built only after both merges, on the run
+  branch. Grades end state only; Branch review bug tickets may follow, so only 01-03 are graded.
+  Needs Bash, so it lives outside the default evals/ suite. Run it with:
+  claude plugin eval . --trust-plugin --eval-dir evals-e2e --case parallel --scaffold --allow-tools Bash Write Edit --ablation none
+tags: [e2e]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: /sdd demo --parallel
+  max_turns: 150
+  timeout_seconds: 3600
+  allowed_tools: [Bash, Read, Write, Edit, Glob, Grep, Agent, Skill, SendMessage, ToolSearch]
+runs: 1
+graders:
+  - type: regex
+    name: ticket-01-done
+    target: {source: file, path: .scratch/demo/issues/01-slugify.md}
+    pattern: 'Status:\**\s*done \([0-9a-f]{7,40}\)'
+  - type: regex
+    name: ticket-02-done
+    target: {source: file, path: .scratch/demo/issues/02-word-count.md}
+    pattern: 'Status:\**\s*done \([0-9a-f]{7,40}\)'
+  - type: regex
+    name: ticket-03-done
+    target: {source: file, path: .scratch/demo/issues/03-summary.md}
+    pattern: 'Status:\**\s*done \([0-9a-f]{7,40}\)'
+  - type: regex
+    name: two-merges-back
+    target: {source: file, path: .git/logs/HEAD}
+    pattern: 'merge: ticket 0[12] from'
+    match: count:2
+  - type: regex
+    name: dependent-after-merges
+    target: {source: file, path: .git/logs/HEAD}
+    pattern: 'merge: ticket 0[12] from[\s\S]*merge: ticket 0[12] from[\s\S]*\(ticket 03\)'
+  - type: tool_used
+    name: worktree-implementers
+    tool: Agent
+    input_match: 'worktree'
+    min: 2
+  - type: tool_used
+    name: merge-conflict-skill-used
+    tool: Skill
+    input_match: 'mattpocock-skills:resolving-merge-conflicts'
+    min: 1
+  - type: regex
+    name: gate-green
+    target: {source: file, path: .gate-result}
+    pattern: '^green'
+  - type: llm
+    name: ledger
+    focus: {source: file, path: .scratch/demo/ledger.md}
+    criteria: >
+      The Ledger's `## Run` section has `Parallel: on`. Tickets 01 and 02 are recorded as done,
+      each with a worktree branch and a Merge check that passed with a log path. Ticket 03 is
+      recorded as done with a commit sha. No Checkpoint item names a merge check.
