@@ -28,3 +28,5 @@ Spike answers (Claude Code 2.1.296; full notes in the spec's Further Notes, "Spi
 - **Result:** Checkpoint eval cases grade "stopped at a Checkpoint and recorded it in the Ledger" (the spec's headless caveat).
 - **Install:** `claude plugin marketplace add /home/chris/devel/cwi-skills` then `claude plugin install cwi-skills@cwi-skills`. `claude plugin list` shows `cwi-skills@cwi-skills`, version 0.1.0, user scope, enabled, read from the repo.
 - **Spike artifacts:** the spike agent was deleted. `evals/spike-headless-tools/` stays as a marked probe fixture (1 run, ~$0.05).
+
+- implement-loop: closed by commit d5043da (gate green: validate ok, eval 1.00).
