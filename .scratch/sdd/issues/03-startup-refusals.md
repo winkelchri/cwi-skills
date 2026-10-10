@@ -22,3 +22,5 @@
 - Allowlist fallback: `skills/sdd/permissions.md`.
 - Red Gate and unplanned folder: new Startup order in `skills/sdd/SKILL.md`. The folder check moved ahead of the Gate (cheapest refusal first); the branch switch moved after the green Gate, so a red Gate leaves the repo untouched.
 - Evals: `evals/not-planned` (default suite, passes); `evals-e2e/preflight-refusal` (red Gate, needs Bash, so outside the default suite). Headless evidence in the spec's "Build notes (ticket 03)".
+
+- implement-loop: closed by commit e24237a (gate green: validate ok, default eval suite 3/3).
