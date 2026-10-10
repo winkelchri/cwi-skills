@@ -29,3 +29,5 @@ Operator prompts never pre-judge findings.
 - The Ticket reviewer is `agents/ticket-reviewer.md` (Sonnet, `cwi-skills:ticket-reviewer`): spec verdict (Missing / Extra / Misunderstood / Cannot verify), quality findings graded Critical / Important / Minor with `path:line`, re-review marks ADDRESSED / NOT ADDRESSED, final line `VERDICT: ...`. The loop is the "Review and fix loop" section of `skills/sdd/SKILL.md`; the Implementer's "Fix rounds" section makes it check each finding and fix or dispute it.
 - A ticket that passes verification gets the Ledger outcome `in review` until its verdict is `PASS`, so an interrupted run resumes at the review. Fix rounds add `fix: ... (ticket NN, review round F)` commits, so a reviewed ticket can own more than one commit; its status names the last one and its Ledger row the range.
 - Eval: `evals-e2e/fix-loop/` (needs Bash, like the other e2e cases). Verified with headless runs; details in the spec's "Build notes (ticket 04)".
+
+- implement-loop: closed by commit 6273301 (gate green: validate ok, default eval suite 3/3). Untested headless: SendMessage resume, Opus rounds 4-5, stuck path after round 5.
