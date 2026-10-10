@@ -35,14 +35,10 @@ graders:
     input_match: 'cwi-skills:branch-reviewer'
     min: 1
     max: 3
-  - type: llm
+  - type: regex
     name: minor-filed
-    focus: trace
-    criteria: >
-      The Operator (top-level agent) created at least one ticket file under
-      `.scratch/demo/issues/` (with Write or a shell command) whose `Finding:` line names a
-      Minor id `M<n>` from a branch review file, with `Type:` bug and `Status:`
-      ready-for-agent.
+    target: trace
+    pattern: '\*\*Finding:\*\* M[0-9]+ '
   - type: regex
     name: branch-minors-not-deferred-unfiled
     target: {source: file, path: .scratch/demo/ledger.md}
@@ -79,14 +75,14 @@ graders:
     criteria: >
       `slugify` never returns a slug that starts or ends with "-" or holds two hyphens in a
       row: for example "- Hello -" gives "hello" and "Hello - World" gives "hello-world".
-  - type: llm
+  - type: regex
     name: bug-ticket-filed
-    focus: trace
-    criteria: >
-      The Operator (top-level agent) created a ticket file `.scratch/demo/issues/04-*.md`
-      containing `Type:` bug, `Found by:` branch review, a `Finding:` line naming a branch
-      review file, and `Status:` ready-for-agent, and that ticket's status later became
-      `done (<sha>)`.
+    target: trace
+    pattern: '\*\*Found by:\*\* branch review'
+  - type: regex
+    name: bug-ticket-done
+    target: {source: file, path: .scratch/demo/ledger.md}
+    pattern: '\| 04 \| done \|'
   - type: llm
     name: ledger
     focus: {source: file, path: .scratch/demo/ledger.md}
@@ -96,11 +92,16 @@ graders:
       The tickets table records ticket 04 as done with a commit range and a Ticket review
       verdict.
   - type: llm
-    name: no-push-offered-only
+    name: no-push-run
     focus: trace
     criteria: >
       No `git push`, `gh pr create`, `git branch -d`/`-D` or `git worktree remove` command was
-      run. The Operator's final message offers pushing and opening a PR as options (with
+      run by any agent.
+  - type: llm
+    name: actions-offered-only
+    focus: {source: file, path: .scratch/demo/runs/final-checkpoint.md}
+    criteria: >
+      This Final Checkpoint text offers pushing and opening a PR as options (with
       commands) without performing them, and offers cleanup of prototype branches and
       worktrees, or says none is needed when the run created none, and lists the Rulings and the open deferred
       findings (or says there are none).

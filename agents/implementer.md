@@ -77,7 +77,7 @@ Leave Minor findings alone. Run the Gate, then commit the round's changes once, 
 
 ## Final message
 
-At most five lines of summary, then exactly one last line:
+Write the report file first; it is the record the reviewer works from. Then at most five lines of summary, then your report's `## Evidence` section copied unchanged, then exactly one last line:
 
 ```
 STATUS: <DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT> — <evidence or reason>

@@ -15,7 +15,7 @@ No slug given → find the candidates. A **runnable slug** is a folder `.scratch
 
 ## Ground rules
 
-- **State files** are the only files you write: everything under `<dir>` (spec, tickets, map, `ledger.md`, `runs/`, `research/`). Product code, tests, config and commits belong to the Implementer. State files stay uncommitted in the working tree. Scratch output, such as saved Gate and smoke logs, goes under `<dir>/runs/` too, never to `/tmp` or anywhere else outside the repo.
+- **State files** are the only files you write: everything under `<dir>` (spec, tickets, map, `ledger.md`, `runs/`, `research/`). Product code, tests, config and commits belong to the Implementer. State files stay uncommitted in the working tree. Scratch output, such as saved Gate and smoke logs, goes under `<dir>/runs/` too, never to `/tmp` or anywhere else outside the repo. Run every command in the foreground and wait for it; never start background commands, whose late output can replace your final message.
 - **Safety rules** — you follow them, and every brief carries them word for word:
 
   > No `git push` or force-push. No `git reset`, no branch deletion, no history rewriting. No merging, rebasing or cherry-picking a `prototype/*` branch into any other branch. No reading or writing files outside this repository; the one exception is reading installed skills under `~/.claude/plugins/`.
@@ -95,6 +95,7 @@ A `Type: decision` ticket whose blockers are all done becomes a Checkpoint item:
    The brief carries the ticket as it stands: never scope out, excuse or reword any of its acceptance criteria, even one only a human could check. The Implementer maps every criterion to run evidence, and one it cannot run is its to report.
 3. **Dispatch** one fresh Implementer: Agent tool, `subagent_type: cwi-skills:implementer`, in the foreground, prompt `Brief: <brief path>. Work this ticket.` Keep the agent ID the result gives; fix rounds resume it. Its final line is `STATUS: <status> — <evidence or reason>`. A missing or unreadable status line counts as `BLOCKED`.
 4. **Verify** it yourself, whatever the report claims:
+   - the report file exists. Missing → save the Implementer's whole final message there verbatim, never a summary of it, and record a Ruling. A report without an `## Evidence` section counts as no run evidence for every criterion
    - exactly one new commit: `git rev-list --count <base>..HEAD` is `1`
    - that commit touches nothing under `<dir>`: `git diff --name-only <base> HEAD`
    - the Gate is green when you run it
@@ -158,7 +159,7 @@ Every ticket passes a Ticket review before it counts as done. Diffs, reviews and
 
    <the problem with its path:line; for a Cannot verify line, the requirement and the evidence that would settle it>
 
-   - [ ] The problem is gone, or the requirement is shown to hold, with a test at the spec's seam that would have caught it
+   - [ ] The problem is gone, or the requirement is shown to hold, with a test that would have caught it — at the E2E seam when the finding is about user-visible behaviour. A finding about the code alone (dead code, naming, structure) needs no new test: the Gate and smoke run staying green are its evidence
    ```
 
    A **finding ticket** — one with a `Found by:` line — files no tickets from its own reviews: that bounds the loop. Copy every one of its Minor and `Cannot verify` lines into the Ledger's `## Deferred findings` as `- NN — <finding>` instead, even one another ticket seems to cover; the next Branch review or re-review judges them. Minor findings never start a fix round.
@@ -268,7 +269,7 @@ Once every ticket is done, the Branch reviewer on Opus looks at the whole run br
 
    Fix direction: <the review's fix direction>
 
-   - [ ] The problem is gone, with a test at the spec's seam that would have caught it
+   - [ ] The problem is gone, with a test that would have caught it — at the E2E seam when the finding is about user-visible behaviour. A finding about the code alone (dead code, naming, structure) needs no new test: the Gate and smoke run staying green are its evidence
    ```
 
    A re-review also files the findings [Re-review](#re-review) step 6 names. A resumed run that finds the line at `filing` files only the findings no ticket's `**Finding:**` line names yet.
@@ -291,7 +292,7 @@ Reached when every ticket's status starts with `done` or is `wontfix`, no Checkp
 
 1. **Gate.** Run the Gate on the run branch, output to `<dir>/runs/gate-final.log`. Red → [stop as stalled](#stalls), naming the log.
 2. **Notify** once: `/sdd <slug>: run done`.
-3. **Present** in one message:
+3. **Present** in one message, and write the same text to `<dir>/runs/final-checkpoint.md` first, so it survives even if the chat does not:
    - the run summary: each ticket's outcome, review verdict and commit range, the Branch review and re-review results with their paths, and the run's commit range `<base>..HEAD`
    - every Ruling from the Ledger
    - every open line under `## Deferred findings` (no `→` mark), numbered: the leftovers of a capped Branch review, and findings deferred after the last re-review
