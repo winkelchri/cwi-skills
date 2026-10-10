@@ -1,0 +1,51 @@
+schema_version: "1.0"
+name: no-slug-list
+description: >
+  A bare /sdd in a repo with two runnable slugs (demo: three tickets, one done; maps: a
+  wayfinding map with five open tickets) and one folder that is not runnable (notes: a spec
+  only). /sdd must list demo and maps with their mode and open counts, leave out notes, end
+  with the usage line, and change nothing. Grades end state only.
+  Needs Bash, so it lives outside the default evals/ suite. Run it with:
+  claude plugin eval . --trust-plugin --eval-dir evals-e2e --case no-slug-list --scaffold --allow-tools Bash Write Edit --ablation none
+tags: [e2e]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: /sdd
+  max_turns: 15
+  timeout_seconds: 600
+  allowed_tools: [Bash, Read, Write, Edit, Glob, Grep, Agent, Skill, SendMessage, ToolSearch]
+runs: 1
+graders:
+  - type: regex
+    name: lists-demo
+    target: last_message
+    pattern: 'demo\W+tickets\W+2 open of 3'
+  - type: regex
+    name: lists-maps
+    target: last_message
+    pattern: 'maps\W+map\W+5 open of 5'
+  - type: regex
+    name: skips-notes
+    target: last_message
+    pattern: 'notes'
+    match: count:0
+  - type: regex
+    name: usage-line
+    target: last_message
+    pattern: 'Usage: `?/sdd <slug>'
+  - type: regex
+    name: no-ledger
+    target: {source: file, path: .scratch/demo/ledger.md}
+    pattern: '.'
+    match: count:0
+  - type: tool_used
+    name: no-agents
+    tool: Agent
+    min: 0
+    max: 0
+  - type: tool_used
+    name: no-writes
+    tool: Write
+    min: 0
+    max: 0

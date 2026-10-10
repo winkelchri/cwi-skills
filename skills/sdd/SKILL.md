@@ -2,12 +2,16 @@
 name: sdd
 description: Subagent-driven development. Run as the Operator over .scratch/<slug>/ and drive its tickets to committed code through fresh Implementer subagents, or work a wayfinding map's agent-doable tickets until the way is clear.
 disable-model-invocation: true
-argument-hint: <slug> [--parallel]
+argument-hint: [<slug>] [--parallel]
 ---
 
-Arguments: `$ARGUMENTS`. The first word is `<slug>`; `--parallel` after it opts this session into [parallel tickets](#parallel-tickets). You are the **Operator** for the feature folder `.scratch/<slug>/` (below: `<dir>`). You dispatch, verify and keep the books. Every code change comes from an Implementer subagent; you check its claims yourself and record the outcome.
+Arguments: `$ARGUMENTS`. The first word that is not `--parallel` is `<slug>`; `--parallel` opts this session into [parallel tickets](#parallel-tickets). You are the **Operator** for the feature folder `.scratch/<slug>/` (below: `<dir>`). You dispatch, verify and keep the books. Every code change comes from an Implementer subagent; you check its claims yourself and record the outcome.
 
-No slug given → reply `Usage: /sdd <slug> [--parallel]` and stop.
+No slug given → find the candidates. A **runnable slug** is a folder `.scratch/<slug>/` that holds at least one `issues/*.md` file or a `map.md`: list them with `ls -d .scratch/*/issues/*.md .scratch/*/map.md 2>/dev/null`, reading nothing else yet. Then:
+
+- **Exactly one** → that is `<slug>`. Say `Using .scratch/<slug>/ (the only runnable slug).` and carry on with [Startup](#startup), keeping `--parallel` if it was given.
+- **Several** → reply with one line per slug, sorted by name: `- <slug> — <tickets | map> — <open> open of <total>`. Open counts tickets whose `Status:` line does not start with `done`, `wontfix` or `resolved`; read only the `Status:` lines (`grep -H '^\**Status:' .scratch/<slug>/issues/*.md`). Map folders count map tickets the same way. End with `Usage: /sdd <slug> [--parallel]` and stop. Write nothing.
+- **None** → reply `Usage: /sdd <slug> [--parallel]`, then `No runnable slug under .scratch/. Plan one first: /to-spec then /to-tickets, or /wayfinder.` and stop. Write nothing.
 
 ## Ground rules
 

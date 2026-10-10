@@ -17,8 +17,14 @@ mode=$(field permission_mode)
 args=$(field command_args)
 guide="${CLAUDE_PLUGIN_ROOT}/skills/sdd/permissions.md"
 
-# No slug: /sdd only prints its usage line.
-[ -n "$(printf '%s' "$args" | tr -d '[:space:]')" ] || exit 0
+# No slug: /sdd only lists the runnable slugs, unless exactly one exists, which it then runs.
+slug=$(printf '%s' "$args" | tr -s '[:space:]' '\n' | grep -v '^--parallel$' | head -n1)
+if [ -z "$slug" ]; then
+  cwd=$(field cwd)
+  runnable=$(cd "${cwd:-.}" 2>/dev/null &&
+    ls -d .scratch/*/issues/*.md .scratch/*/map.md 2>/dev/null | cut -d/ -f2 | sort -u | wc -l)
+  [ "${runnable:-0}" -eq 1 ] || exit 0
+fi
 
 refuse() {
   reason="/sdd refused to start: $1 Restart the session with \`claude --permission-mode auto\` (or press Shift+Tab until auto mode is on), or add the allowlist documented in $guide to the project's .claude/settings.local.json. Nothing was changed."

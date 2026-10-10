@@ -1,0 +1,41 @@
+schema_version: "1.0"
+name: no-slug-one
+description: >
+  A bare /sdd in a repo with exactly one runnable slug (.scratch/demo/, three tickets) must pick
+  that slug, say so, and carry on with Startup. The fixture's Gate is red, so the run then aborts
+  before any work, which keeps the case cheap. Grades end state only.
+  Needs Bash, so it lives outside the default evals/ suite. Run it with:
+  claude plugin eval . --trust-plugin --eval-dir evals-e2e --case no-slug-one --scaffold --allow-tools Bash Write Edit --ablation none
+tags: [e2e]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: /sdd
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Bash, Read, Write, Edit, Glob, Grep, Agent, Skill, SendMessage, ToolSearch]
+runs: 1
+graders:
+  - type: regex
+    name: names-picked-slug
+    target: last_message
+    pattern: '\.scratch/demo/'
+  - type: regex
+    name: gate-ran
+    target: {source: file, path: .gate-result}
+    pattern: '^red'
+  - type: regex
+    name: ledger-created
+    target: {source: file, path: .scratch/demo/ledger.md}
+    pattern: 'Gate'
+  - type: regex
+    name: no-commits
+    target: {source: file, path: .git/logs/HEAD}
+    pattern: '\(ticket \d+'
+    match: count:0
+  - type: tool_used
+    name: no-implementer
+    tool: Agent
+    input_match: 'cwi-skills:implementer'
+    min: 0
+    max: 0

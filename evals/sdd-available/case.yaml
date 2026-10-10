@@ -1,8 +1,8 @@
 schema_version: "1.0"
 name: sdd-available
 description: >
-  Cheap smoke check that the plugin ships /sdd: invoked without a slug it answers with its usage
-  line. The full end-to-end cases need Bash and live in evals-e2e/.
+  Cheap smoke check that the plugin ships /sdd: invoked without a slug in an empty workspace (no runnable
+  slug) it answers with its usage line. The full end-to-end cases need Bash and live in evals-e2e/.
 execution:
   prompt: /sdd
   max_turns: 3
