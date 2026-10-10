@@ -4,6 +4,8 @@
 # just before its Branch review. This case's spec adds a rule that no ticket repeats: a slug
 # never starts or ends with "-". The planted commits follow the tickets literally, so
 # slugify("- Hello -") returns "-hello-". Each ticket passed review alone; the rule spans them.
+# Ticket 03's commit also declares an unused MAX_TITLE_LENGTH constant: a Minor finding
+# that must become a ticket of its own.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 cp -R "$here/../happy-path/fixture/." .
@@ -45,6 +47,8 @@ JS
 commit 02 "feat: add slugify"
 
 cat > src/slug.js <<'JS'
+const MAX_TITLE_LENGTH = 200;
+
 export function slugify(title) {
   return title
     .toLowerCase()

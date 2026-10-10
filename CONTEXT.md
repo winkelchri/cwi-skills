@@ -19,7 +19,7 @@ A fresh subagent that performs a Ticket review and returns spec and quality verd
 _Avoid_: Code reviewer, checker
 
 **Branch reviewer**:
-A fresh Opus subagent that performs the Branch review, or its one re-review, and sorts each finding as unambiguous or a judgement call.
+A fresh Opus subagent that performs the Branch review, or one of its re-reviews, and sorts each finding as unambiguous, a judgement call or Minor.
 _Avoid_: Final reviewer
 
 **Scout**:
@@ -29,8 +29,12 @@ _Avoid_: Researcher, wayfinder child
 ### Tickets
 
 **Ticket**:
-One unit of work in `.scratch/<feature-slug>/issues/`, with a lifecycle of ready, claimed, then done or wontfix. Findings from the Branch review become Tickets of type bug.
+One unit of work in `.scratch/<feature-slug>/issues/`, with a lifecycle of ready, claimed, then done or wontfix. Review findings become Tickets of type bug.
 _Avoid_: Issue, task, story
+
+**Finding ticket**:
+A Ticket of type bug filed from a review finding, marked by its `Found by:` line: a Ticket review's Minor or `Cannot verify` line, or any Branch review finding. A Finding ticket's own Minor findings are deferred to the Ledger, not filed, so the loop ends.
+_Avoid_: Follow-up ticket, review ticket
 
 **AFK ticket**:
 A Ticket an Implementer can finish and verify without the human.
@@ -77,7 +81,7 @@ Review of one Implementer's diff against its Ticket, judging spec compliance and
 _Avoid_: Task review, per-commit review
 
 **Branch review**:
-Review of the whole feature branch once every Ticket is done, to catch problems that span Tickets. Its findings are filed as new Tickets.
+Review of the whole feature branch once every Ticket is done, to catch problems that span Tickets. Its findings, Minors included, are filed as new Tickets; after each fix wave the whole branch is re-reviewed, until a re-review is clean or after the third.
 _Avoid_: Final review, big-picture review
 
 **Merge check**:

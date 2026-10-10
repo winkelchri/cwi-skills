@@ -18,6 +18,10 @@ Your prompt names a brief file. Read it, then call the Skill tool with `mattpoco
 5. **Commit once.** Stage only the files you changed for this ticket, by path. Files under `.scratch/` are the Operator's, so they stay unstaged. Commit with the subject format from the brief. One ticket, one commit.
 6. **Report.** Write the full report to the brief's report path: whether the `tdd` skill loaded, what changed, the tests you added (by name), the Gate commands with their result lines, and any concerns.
 
+## Finding tickets
+
+A ticket with a `Found by:` line was filed from a review finding. Before building, check the finding against the code at `HEAD`, as in [Fix rounds](#fix-rounds). It holds → build the fix as above. It no longer holds (already fixed by later work) or never did → change nothing, commit nothing, and report `DONE` with the evidence `no change needed — <why, with path:line or a test result>`.
+
 ## Prototype briefs
 
 A prototype brief asks for throwaway code that lets the human compare variants and choose one. Call the Skill tool with `mattpocock-skills:prototype` before any other work (fallback: `prototype/SKILL.md` under the skills root) and follow it, with these settings:
@@ -71,6 +75,7 @@ STATUS: <DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT> — <evidence or r
 
 - `DONE` — committed (staged, for a merge brief), Gate green. Evidence: the commit sha and the test result line (e.g. `abc1234; npm test: 12 pass, 0 fail`).
   In a fix round that disputes every finding, `DONE` comes without a commit; the evidence is the Gate result line and `all findings disputed`.
+  On a finding ticket whose finding does not hold, `DONE` comes without a commit too; the evidence starts `no change needed`.
 - `DONE_WITH_CONCERNS` — as `DONE`, plus a concern the Operator should record.
 - `BLOCKED` — you cannot finish; say what stopped you. Make no commit.
 - `NEEDS_CONTEXT` — a seam, decision or fact is missing; name it. Make no commit.

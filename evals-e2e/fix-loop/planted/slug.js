@@ -1,4 +1,5 @@
 const MAX_LENGTH = 20;
+const SEPARATOR = "-";
 
 export function slugify(title) {
   const slug = title.trim().toLowerCase().replace(/\s+/g, "-");

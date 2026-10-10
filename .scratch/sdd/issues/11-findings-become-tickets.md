@@ -3,7 +3,7 @@
 **Type:** feature
 **Blocked by:** 04, 07
 
-**Status:** ready-for-agent
+**Status:** done
 
 **What to build:** Review findings no longer wait in `## Deferred findings` for the human. Every finding becomes a ticket that the Operator schedules like any other. The developer chose this on 2026-10-10, superseding spec stories 18, 39 and 45 where they conflict.
 
@@ -15,8 +15,8 @@
 
 **Acceptance criteria**
 
-- [ ] A ticket review's Minor finding produces a new `ready-for-agent` ticket blocked by the reviewed ticket, and the run builds it
-- [ ] A finding ticket's own Minors are deferred, not filed
-- [ ] Branch review Minors become tickets
-- [ ] The Branch reviewer re-runs after each wave until a review is clean, at most 3 re-reviews; leftovers reach the Final Checkpoint
-- [ ] `evals-e2e/branch-review` and `evals-e2e/fix-loop` updated to the new behaviour and passing in a headless run
+- [x] A ticket review's Minor finding produces a new `ready-for-agent` ticket blocked by the reviewed ticket, and the run builds it
+- [x] A finding ticket's own Minors are deferred, not filed
+- [x] Branch review Minors become tickets
+- [ ] The Branch reviewer re-runs after each wave until a review is clean, at most 3 re-reviews; leftovers reach the Final Checkpoint (clean after 2 re-reviews exercised headless; the 3-re-review cap and its leftovers were not)
+- [x] `evals-e2e/branch-review` and `evals-e2e/fix-loop` updated to the new behaviour and passing in a headless run

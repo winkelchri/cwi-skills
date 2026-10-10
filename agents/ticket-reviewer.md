@@ -35,7 +35,7 @@ Spec verdict: `FAIL` when anything is Missing, Extra or Misunderstood; otherwise
 - **Important** — will cost later work if left: a missing edge case the ticket implies, a misleading name or test, a convention broken.
 - **Minor** — a nit worth recording, not worth a fix round now.
 
-Severity follows the impact, whatever the volume of findings. Spec problems that are not `Cannot verify` are at least Important.
+Each Minor and each `Cannot verify` line is filed as a Ticket of its own, so write each to stand alone: `path:line`, the problem and what would settle it. Severity follows the impact, whatever the volume of findings. Spec problems that are not `Cannot verify` are at least Important.
 
 ## Re-review
 

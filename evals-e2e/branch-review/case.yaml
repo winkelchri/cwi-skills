@@ -6,8 +6,12 @@ description: >
   "untitled" for a title with no letters or digits; no ticket repeats those rules, and the
   planted commits follow the tickets literally, so slugify("- Hello -") returns "--hello--". The Branch review (code-review on Opus) must
   catch it and file a bug ticket 04 (Type bug, Found by branch review, ready-for-agent);
-  04 goes through the normal loop; exactly one re-review follows; the run reaches the Final
-  Checkpoint with the Gate green and pushes nothing. Headless runs have no AskUserQuestion,
+  its Minor findings become tickets too. They go through the normal loop; the Branch
+  reviewer then re-reviews the whole branch after each fix wave until a re-review is clean,
+  at most 3 times; the run reaches the Final Checkpoint with the Gate green and pushes
+  nothing. Ticket 03's planted commit declares an unused MAX_TITLE_LENGTH constant, a
+  Minor that must be filed as a ticket. The spec settles accented letters (dropped), so no
+  finding needs the human and the run can reach the Final Checkpoint headless. Headless runs have no AskUserQuestion,
   so the Final Checkpoint offers push, PR and cleanup in the final message and performs
   none. Grades end state only.
   Needs Bash, so it lives outside the default evals/ suite. Run it with:
@@ -17,17 +21,30 @@ context:
   scaffold_script: scaffold.sh
 execution:
   prompt: /sdd demo
-  max_turns: 120
+  max_turns: 250
   timeout_seconds: 3600
   allowed_tools: [Bash, Read, Write, Edit, Glob, Grep, Agent, Skill, SendMessage, ToolSearch]
 runs: 1
 graders:
   - type: tool_used
-    name: review-and-one-re-review
+    name: review-and-up-to-three-re-reviews
     tool: Agent
     input_match: 'cwi-skills:branch-reviewer'
     min: 2
-    max: 2
+    max: 4
+  - type: llm
+    name: minor-filed
+    focus: trace
+    criteria: >
+      The Operator (top-level agent) created at least one ticket file under
+      `.scratch/demo/issues/` (with Write or a shell command) whose `Finding:` line names a
+      Minor id `M<n>` from a branch review file, with `Type:` bug and `Status:`
+      ready-for-agent.
+  - type: regex
+    name: branch-minors-not-deferred-unfiled
+    target: {source: file, path: .scratch/demo/ledger.md}
+    pattern: '\n- branch review — '
+    match: count:0
   - type: tool_used
     name: code-review-skill-used
     tool: Skill
@@ -71,13 +88,16 @@ graders:
     name: ledger
     focus: {source: file, path: .scratch/demo/ledger.md}
     criteria: >
-      The Ledger's `## Run` section has a `Branch review:` line saying the review was
-      re-reviewed, naming ticket 04 as filed and both the review and re-review files. The
-      tickets table records ticket 04 as done with a commit range and a Ticket review verdict.
+      The Ledger's `## Run` section has a `Branch review:` line reading `clean after K
+      re-reviews` (K of 1, 2 or 3) or `capped after 3 re-reviews`, naming the review files.
+      The tickets table records ticket 04 as done with a commit range and a Ticket review
+      verdict.
   - type: llm
     name: no-push-offered-only
     focus: trace
     criteria: >
       No `git push`, `gh pr create`, `git branch -d`/`-D` or `git worktree remove` command was
-      run. The Operator's final message offers pushing, opening a PR and cleanup as options
-      (with commands) without performing them, and lists the Rulings and the deferred findings.
+      run. The Operator's final message offers pushing and opening a PR as options (with
+      commands) without performing them, and offers cleanup of prototype branches and
+      worktrees, or says none is needed when the run created none, and lists the Rulings and the open deferred
+      findings (or says there are none).

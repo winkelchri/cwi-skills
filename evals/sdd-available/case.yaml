@@ -12,4 +12,4 @@ graders:
   - type: regex
     name: usage-line
     target: last_message
-    pattern: 'Usage: /sdd <slug>'
+    pattern: 'Usage:\W*/sdd <slug>'

@@ -3,7 +3,8 @@
 # happy-path project files with this case's own spec and tickets, as a /sdd run left it
 # when interrupted after ticket 02's build commit passed verification but before its
 # Ticket review. That commit (planted/) misses the spec's 20-character cap for suffixed
-# slugs; its report claims every spec rule is covered.
+# slugs; its report claims every spec rule is covered. It also declares an unused
+# SEPARATOR constant, a Minor finding that must become a ticket of its own.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 cp -R "$here/../happy-path/fixture/." .
