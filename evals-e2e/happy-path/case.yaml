@@ -1,0 +1,67 @@
+schema_version: "1.0"
+name: happy-path
+description: >
+  Three chained AFK tickets (numbering differs from dependency order: 02, then 03, then 01)
+  in a small node fixture repo. /sdd must finish all three with one commit each, a Ledger
+  holding the Gate Ruling, and a green Gate. Grades end state only.
+  Ticket 07 adds the Branch review grader the spec's happy path names.
+  Needs Bash, so it lives outside the default evals/ suite. Run it with:
+  claude plugin eval . --trust-plugin --eval-dir evals-e2e --scaffold --allow-tools Bash Write Edit --ablation none
+tags: [e2e]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: /sdd demo
+  max_turns: 120
+  timeout_seconds: 3600
+  allowed_tools: [Bash, Read, Write, Edit, Glob, Grep, Agent, Skill]
+runs: 1
+graders:
+  - type: regex
+    name: ticket-02-done
+    target: {source: file, path: .scratch/demo/issues/02-slugify.md}
+    pattern: 'Status:\**\s*done \([0-9a-f]{7,40}\)'
+  - type: regex
+    name: ticket-03-done
+    target: {source: file, path: .scratch/demo/issues/03-strip-punctuation.md}
+    pattern: 'Status:\**\s*done \([0-9a-f]{7,40}\)'
+  - type: regex
+    name: ticket-01-done
+    target: {source: file, path: .scratch/demo/issues/01-unique-slug.md}
+    pattern: 'Status:\**\s*done \([0-9a-f]{7,40}\)'
+  - type: regex
+    name: one-commit-per-ticket
+    target: {source: file, path: .git/logs/HEAD}
+    pattern: '\tcommit: '
+    match: count:3
+  - type: regex
+    name: dependency-order
+    target: {source: file, path: .git/logs/HEAD}
+    pattern: '\(ticket 02\)[\s\S]*\(ticket 03\)[\s\S]*\(ticket 01\)'
+  - type: regex
+    name: gate-green
+    target: {source: file, path: .gate-result}
+    pattern: '^green'
+  - type: llm
+    name: ledger
+    focus: {source: file, path: .scratch/demo/ledger.md}
+    criteria: >
+      The Ledger records the Gate command `npm test` as a Ruling with a reason and a cost if wrong,
+      and records tickets 01, 02 and 03 each as done with a commit sha.
+  - type: tool_used
+    name: implementer-dispatched
+    tool: Agent
+    input_match: 'cwi-skills:implementer'
+    min: 3
+  - type: tool_used
+    name: tdd-skill-used
+    tool: Skill
+    input_match: 'mattpocock-skills:tdd'
+    min: 3
+  - type: llm
+    name: operator-edits-state-only
+    focus: trace
+    criteria: >
+      Every Write or Edit call made by the top-level agent (the Operator, not a dispatched
+      subagent) targets a file under `.scratch/demo/`. Calls made inside an Implementer
+      subagent do not count.

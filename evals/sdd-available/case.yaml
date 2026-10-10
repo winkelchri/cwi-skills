@@ -1,0 +1,15 @@
+schema_version: "1.0"
+name: sdd-available
+description: >
+  Cheap smoke check that the plugin ships /sdd: invoked without a slug it answers with its usage
+  line. The full end-to-end cases need Bash and live in evals-e2e/.
+execution:
+  prompt: /sdd
+  max_turns: 3
+  allowed_tools: [Read, Glob, Grep]
+runs: 1
+graders:
+  - type: regex
+    name: usage-line
+    target: last_message
+    pattern: 'Usage: /sdd <slug>'
