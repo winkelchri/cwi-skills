@@ -1,0 +1,13 @@
+{
+  "description": "Startup permission check for /sdd. Fires only when /sdd is expanded; silent for every other prompt.",
+  "hooks": {
+    "UserPromptExpansion": [
+      {
+        "matcher": "cwi-skills:sdd",
+        "hooks": [
+          { "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/sdd-permission-preflight.sh\"", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}

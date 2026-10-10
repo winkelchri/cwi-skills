@@ -21,12 +21,19 @@ No slug given → reply `Usage: /sdd <slug>` and stop.
 
 ## Startup
 
-1. **Tickets.** Read every `<dir>/issues/*.md`. None → stop: the folder needs `/to-spec` and `/to-tickets` first.
-2. **Ledger.** `<dir>/ledger.md` exists → this is a resumed run: reuse its branch, Gate and skills root. Otherwise create it from [the template](#ledger-template).
-3. **Branch.** Note the current branch. On `main`, `master` or the repo's default branch, switch to `sdd/<slug>` (create it with `git switch -c` if missing) and record that as a Ruling. Record the branch and `git rev-parse HEAD` as the run's base.
+Each check below can refuse the run. A refusal stops before any ticket is claimed, any branch is switched or any agent is dispatched.
+
+1. **Permissions.** The plugin's hook (`hooks/sdd-permission-preflight.sh`) has already checked the session's permission mode before you saw this prompt; it refuses `/sdd` in plan mode, and in Manual or acceptEdits mode without the allowlist documented in [permissions.md](permissions.md). If your context holds a `/sdd permission preflight` note, this session runs on that allowlist: remember its allowed Bash entries for step 6.
+2. **Folder.** `<dir>/issues/*.md` exist → ticket mode; read them all. Otherwise `<dir>/map.md` exists → wayfinding mode, which is not built yet: say so and stop. Neither (or no `<dir>` at all) → stop and write nothing, replying:
+
+   > `.scratch/<slug>/` holds neither tickets nor a wayfinding map. Plan the feature first: `/to-spec` then `/to-tickets` for a feature you can describe, or `/wayfinder` to map an effort that is still unclear. Then run `/sdd <slug>` again.
+
+3. **Ledger.** `<dir>/ledger.md` exists → this is a resumed run: reuse its branch, Gate and skills root. A Ledger left by a run that aborted at startup records no run branch yet; step 8 still applies. Otherwise create it from [the template](#ledger-template).
 4. **Skills root.** Record the newest `~/.claude/plugins/cache/*/mattpocock-skills/<version>/skills/` in the Ledger (ADR-0001: user-only upstream skills are read by path from there).
 5. **Gate** — the project's typecheck plus full test suite. Look in `CLAUDE.md`, `AGENTS.md`, then manifests (`package.json` scripts, `Makefile`, `pyproject.toml`, `Cargo.toml`, `go.mod`). One clear set of commands → use it. Conflicting candidates, or none → ambiguous: Checkpoint. Record the chosen Gate as a Ruling naming its source, for example: Gate is `npm test` — package.json "test" script, no typecheck configured — cost if wrong: broken work counted as done.
-6. Run the Gate. Red → stop before touching any ticket and report the failing output.
+6. **Gate on the allowlist.** Only with a preflight note from step 1: every Gate command must match one of its allowed Bash entries (`Bash(npm test:*)` covers `npm test`). Any missing → stop, name the entries to add to `.claude/settings.local.json`, and point the user to `${CLAUDE_SKILL_DIR}/permissions.md` (give the path, don't read it). The run would otherwise stall on the first Gate run inside an Implementer.
+7. **Gate is green.** Run the Gate on the current branch, output saved to `<dir>/runs/gate-start.log`. Red → abort: claim nothing, switch no branch, dispatch nothing. Record under `## Checkpoints` in the Ledger: `Gate red at start (<command>: <failing summary>) — fix it, then run /sdd <slug> again`. Reply with the failing command and the decisive lines of its output, and stop. A red Gate at start would make failures from new work indistinguishable from existing ones.
+8. **Branch.** Note the current branch. On `main`, `master` or the repo's default branch, switch to `sdd/<slug>` (create it with `git switch -c` if missing) and record that as a Ruling. Record the branch and `git rev-parse HEAD` as the run's base.
 
 ## Pick the next ticket
 

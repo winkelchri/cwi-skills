@@ -1,0 +1,23 @@
+schema_version: "1.0"
+name: not-planned
+description: >
+  /sdd on a slug whose folder holds neither tickets nor a wayfinding map (here: no folder at all)
+  must stop without doing any work and name the planning skills to run first.
+execution:
+  prompt: /sdd not-planned-yet
+  max_turns: 6
+  allowed_tools: [Read, Glob, Grep]
+runs: 1
+graders:
+  - type: regex
+    name: names-to-spec
+    target: last_message
+    pattern: '/to-spec'
+  - type: regex
+    name: names-to-tickets
+    target: last_message
+    pattern: '/to-tickets'
+  - type: regex
+    name: names-wayfinder
+    target: last_message
+    pattern: '/wayfinder'

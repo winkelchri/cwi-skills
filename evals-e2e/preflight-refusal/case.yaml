@@ -1,0 +1,55 @@
+schema_version: "1.0"
+name: preflight-refusal
+description: >
+  The happy-path fixture plus one failing test, so the Gate is red before /sdd starts.
+  /sdd must abort before any work: no commits, no branch switch, every ticket still
+  ready-for-agent, no Implementer dispatched, and the reply names the red Gate.
+  Grades end state only.
+  Needs Bash, so it lives outside the default evals/ suite. Run it with:
+  claude plugin eval . --trust-plugin --eval-dir evals-e2e --case preflight-refusal --scaffold --allow-tools Bash Write Edit --ablation none
+tags: [e2e]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: /sdd demo
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Bash, Read, Write, Edit, Glob, Grep, Agent, Skill]
+runs: 1
+graders:
+  - type: regex
+    name: no-commits
+    target: {source: file, path: .git/logs/HEAD}
+    pattern: '\tcommit: '
+    match: count:0
+  - type: regex
+    name: still-on-main
+    target: {source: file, path: .git/HEAD}
+    pattern: 'ref: refs/heads/main'
+  - type: regex
+    name: ticket-01-untouched
+    target: {source: file, path: .scratch/demo/issues/01-unique-slug.md}
+    pattern: 'Status:\**\s*ready-for-agent'
+  - type: regex
+    name: ticket-02-untouched
+    target: {source: file, path: .scratch/demo/issues/02-slugify.md}
+    pattern: 'Status:\**\s*ready-for-agent'
+  - type: regex
+    name: ticket-03-untouched
+    target: {source: file, path: .scratch/demo/issues/03-strip-punctuation.md}
+    pattern: 'Status:\**\s*ready-for-agent'
+  - type: regex
+    name: gate-red
+    target: {source: file, path: .gate-result}
+    pattern: '^red'
+  - type: tool_used
+    name: no-implementer
+    tool: Agent
+    input_match: 'cwi-skills:implementer'
+    max: 0
+  - type: llm
+    name: reports-red-gate
+    focus: last_message
+    criteria: >
+      The reply says the run was aborted (or refused to start) because the Gate (`npm test`)
+      is already failing before any work, and names the failing test or its error.
