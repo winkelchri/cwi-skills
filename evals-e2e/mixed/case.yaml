@@ -1,0 +1,71 @@
+schema_version: "1.0"
+name: mixed
+description: >
+  An AFK ticket (01), a HITL ticket (02) that holds agent work plus a real decision and
+  blocks ticket 03, and a ticket labelled HITL that holds no decision (04). /sdd must
+  finish 01, split 02 into its agent part (built and done) and a decision ticket 05
+  blocked by it, reclassify 04 as AFK with a Ruling and finish it, leave 03 untouched
+  because it now waits on the decision, run the Gate and stop at a Checkpoint recorded in
+  the Ledger. Headless runs have no AskUserQuestion, so the run stops there.
+  Grades end state only.
+  Needs Bash, so it lives outside the default evals/ suite. Run it with:
+  claude plugin eval . --trust-plugin --eval-dir evals-e2e --case mixed --scaffold --allow-tools Bash Write Edit --ablation none
+tags: [e2e]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: /sdd demo
+  max_turns: 150
+  timeout_seconds: 3600
+  allowed_tools: [Bash, Read, Write, Edit, Glob, Grep, Agent, Skill, SendMessage, ToolSearch]
+runs: 1
+graders:
+  - type: regex
+    name: afk-ticket-done
+    target: {source: file, path: .scratch/demo/issues/01-slugify.md}
+    pattern: 'Status:\**\s*done \([0-9a-f]{7,40}\)'
+  - type: regex
+    name: agent-part-done
+    target: {source: file, path: .scratch/demo/issues/02-length-cap.md}
+    pattern: 'Status:\**\s*done \([0-9a-f]{7,40}\)'
+  - type: regex
+    name: decision-ticket-open
+    target: {source: file, path: .scratch/demo/issues/05-length-cap-decision.md}
+    pattern: 'Status:\**\s*ready-for-human'
+  - type: regex
+    name: decision-blocked-by-agent-part
+    target: {source: file, path: .scratch/demo/issues/05-length-cap-decision.md}
+    pattern: 'Blocked by:\**\s*0?2\b'
+  - type: regex
+    name: reclassified-ticket-done
+    target: {source: file, path: .scratch/demo/issues/04-trim-hyphens.md}
+    pattern: 'Status:\**\s*done \([0-9a-f]{7,40}\)'
+  - type: regex
+    name: blocked-ticket-untouched
+    target: {source: file, path: .scratch/demo/issues/03-capped-slugs.md}
+    pattern: 'Status:\**\s*ready-for-agent'
+  - type: regex
+    name: blocked-ticket-waits-on-decision
+    target: {source: file, path: .scratch/demo/issues/03-capped-slugs.md}
+    pattern: 'Blocked by:\**[^\n]*\b0?5\b'
+  - type: regex
+    name: no-commit-for-blocked-ticket
+    target: {source: file, path: .git/logs/HEAD}
+    pattern: '\(ticket 03'
+    match: count:0
+  - type: regex
+    name: gate-green
+    target: {source: file, path: .gate-result}
+    pattern: '^green'
+  - type: regex
+    name: gate-ran-before-checkpoint
+    target: {source: file, path: .scratch/demo/runs/gate-checkpoint-1.log}
+    pattern: '# pass \d+'
+  - type: llm
+    name: ledger
+    focus: {source: file, path: .scratch/demo/ledger.md}
+    criteria: >
+      The Ledger records tickets 01, 02 and 04 as done with commits; a Ruling that ticket
+      02 was split with its decision moved to ticket 05; a Ruling that ticket 04 was
+      reclassified from HITL to AFK because it holds no real decision; and an open
+      (unanswered) Checkpoint item for the ticket 05 decision about the maximum slug length.

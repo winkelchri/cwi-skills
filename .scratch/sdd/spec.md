@@ -211,3 +211,12 @@ Superpowers is not installed. Its useful ideas are built into `/sdd`'s own promp
   - On fresh fixtures, reviews that passed on the first try still deferred their Minors to the Ledger.
   - Not exercised headless: resuming through SendMessage, the Opus rounds 4–5, and the stuck path after round 5.
 
+
+### Build notes (ticket 05)
+
+- **Checkpoint items live in the Ledger** as `- [ ] <id> — <question> — <context path>` under `## Checkpoints`, ticked with the answer. Decision tickets, `NEEDS_CONTEXT`/`BLOCKED` tickets with no commit, stuck tickets and stalls all become items; only startup items (ambiguous or red Gate) are acted on at once.
+- **Headless answers.** With no `AskUserQuestion`, the human answers a decision by appending `## Answer` to the decision ticket and re-running `/sdd <slug>`. The Operator marks it `done (decision)` and the dependent ticket's brief lists the decision ticket. The same `## Answer` section is what an interactive Checkpoint writes.
+- **Split naming is fixed** (`MM-<name>-decision.md`, the next free number) so the eval can grade the file by path.
+- **Verified headless** on `evals-e2e/mixed` (`claude -p "/sdd demo" --permission-mode auto --model sonnet`):
+  - Run 1 ($0.61): 04 reclassified HITL → AFK with a Ruling; 02 split, its `truncateSlug` part done, `05-length-cap-decision.md` filed `ready-for-human`, `Blocked by: 02`; 03 got `Blocked by: 02, 05` and stayed `ready-for-agent`. There were 3 commits (01, 02, 04), none for 03. The Gate ran at the Checkpoint (`runs/gate-checkpoint-1.log`, 6 pass) and one `PushNotification` fired ("1 Checkpoint item(s) waiting"; reported not sent). The run stopped with the item open in the Ledger.
+  - Run 2 ($0.30), after appending `## Answer: 20 characters` to 05: no done ticket was redone. 05 went to `done (decision)` and its item was ticked. Only 03 was dispatched; it built the 20-character cap and passed review. One `PushNotification` fired ("run done").

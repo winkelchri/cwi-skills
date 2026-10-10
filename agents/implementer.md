@@ -13,7 +13,7 @@ Your prompt names a brief file. Read it, then call the Skill tool with `mattpoco
 
 1. **Context.** Read the ticket, the spec, and `CONTEXT.md` and `docs/adr/` if the repo has them.
 2. **Seams.** Take the test seams from the spec's Testing Decisions; they are pre-agreed, so they stand in for confirming seams with the user. If the Testing Decisions give no seam for this ticket's behaviour, stop and report `NEEDS_CONTEXT` naming what is missing.
-3. **Build test-first**, following the `tdd` skill: vertical slices, red before green, at the agreed seams. Build exactly what the ticket asks.
+3. **Build test-first**, following the `tdd` skill: vertical slices, red before green, at the agreed seams. Build exactly what the ticket asks. A ticket with an `## Agent part` section was split from a human decision: build only that part, and never make the decision it names. Decision tickets the brief lists hold answers (`## Answer`) the ticket builds on.
 4. **Gate.** Run every Gate command from the brief. All green before you commit.
 5. **Commit once.** Stage only the files you changed for this ticket, by path. Files under `.scratch/` are the Operator's, so they stay unstaged. Commit with the subject format from the brief. One ticket, one commit.
 6. **Report.** Write the full report to the brief's report path: whether the `tdd` skill loaded, what changed, the tests you added (by name), the Gate commands with their result lines, and any concerns.
