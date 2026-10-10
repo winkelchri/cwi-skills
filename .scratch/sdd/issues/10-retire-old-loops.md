@@ -16,3 +16,5 @@
 - Verified: `ls ~/.claude/skills/` now shows only `synced` (plus `.trash`). A headless `claude -p` asked to list its available skills returned 67 names, none of them `implement-loop` or `wayfinder-loop`.
 - **Unmet, accepted by the developer:** "All `/sdd` eval cases pass" is not ticked. The default `evals/` suite passes (`claude plugin eval . --trust-plugin`: 3/3), and `claude plugin validate .` exits 0. The `evals-e2e/` cases cannot run on this machine (the eval sandbox refuses Bash-granting cases, see Build notes (ticket 02)); they are backed only by the headless runs recorded in the spec's Build notes.
 - Repo wording checked: no docs, skills, agents or `CONTEXT.md` describe the old loops as current. Mentions in the spec and in earlier tickets' comments are historical and stay.
+
+- implement-loop: closed by commit f7f1c4a (gate green: validate ok, default eval suite 3/3). Both skill dirs confirmed gone.
