@@ -7,3 +7,4 @@
 **Status:** ready-for-agent
 
 - [ ] `slugify` behaves as described, tested at the spec's seam
+- [ ] The product owner reads the slugs of ten live posts on the blog and finds them readable

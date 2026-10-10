@@ -78,3 +78,7 @@ graders:
       a ticket that was filed from a review (any ticket numbered 03 or higher whose own file
       has a `Found by:` line). Filing tickets found by `branch review` or `branch re-review`
       is fine.
+  - type: regex
+    name: smoke-after-fix-round
+    target: {source: file, path: .scratch/demo/runs/02-smoke-1.log}
+    pattern: '# fail 0'

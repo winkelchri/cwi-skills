@@ -1,0 +1,67 @@
+schema_version: "1.0"
+name: smoke-red
+description: >
+  Resumes a parallel run whose ticket 01 was built on worktree-agent-planted but not merged
+  (Ledger outcome `built`). The planted commit passes the Gate, but its slugify turns the
+  real title "???" into an empty slug, which the spec forbids; only the smoke run (the
+  spec's e2e command `sh e2e.sh`, the CLI over data/titles.txt) catches it. The Merge check
+  must treat the failing smoke run like a red Gate: attempt 1 fails with the smoke log
+  saved under runs/, nothing is committed, attempt 2 goes to a fresh Opus Implementer, and
+  the merge is committed only once Gate and smoke run pass. Ticket 02 is a decision blocked
+  by 01, so the run then stops at a Checkpoint. Grades end state and trace.
+  Needs Bash, so it lives outside the default evals/ suite. Run it with:
+  claude plugin eval . --trust-plugin --eval-dir evals-e2e --case smoke-red --scaffold --allow-tools Bash Write Edit --ablation none
+tags: [e2e]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: /sdd demo
+  max_turns: 150
+  timeout_seconds: 3600
+  allowed_tools: [Bash, Read, Write, Edit, Glob, Grep, Agent, Skill, SendMessage, ToolSearch]
+runs: 1
+graders:
+  - type: regex
+    name: smoke-1-logged-red
+    target: {source: file, path: .scratch/demo/runs/01-merge-smoke-1.log}
+    pattern: 'FAIL empty slug'
+  - type: regex
+    name: no-merge-commit-at-attempt-1
+    target: {source: file, path: .git/logs/HEAD}
+    pattern: 'merge check 1\)'
+    match: count:0
+  - type: tool_used
+    name: opus-attempt-2
+    tool: Agent
+    input_match: '(cwi-skills:implementer[\s\S]*"opus"|"opus"[\s\S]*cwi-skills:implementer)'
+    min: 1
+  - type: regex
+    name: merged-at-attempt-2
+    target: {source: file, path: .git/logs/HEAD}
+    pattern: 'merge: ticket 01 from worktree-agent-planted \(merge check 2\)'
+  - type: regex
+    name: smoke-2-logged-green
+    target: {source: file, path: .scratch/demo/runs/01-merge-smoke-2.log}
+    pattern: 'e2e: ok'
+  - type: regex
+    name: ticket-01-done
+    target: {source: file, path: .scratch/demo/issues/01-strip-punctuation.md}
+    pattern: 'Status:\**\s*done \([0-9a-f]{7,40}\)'
+  - type: regex
+    name: gate-green
+    target: {source: file, path: .gate-result}
+    pattern: '^green'
+  - type: llm
+    name: never-empty
+    focus: {source: file, path: src/slug.js}
+    criteria: >
+      `slugify` never returns an empty string: a title with no letters or digits, such as
+      "???", gives "untitled", while "Hello, World!" still gives "hello-world".
+  - type: llm
+    name: ledger
+    focus: {source: file, path: .scratch/demo/ledger.md}
+    criteria: >
+      The Ledger records ticket 01 as done (or in review passed to done) with a Merge check
+      that passed at attempt 2, naming its logs (the Gate log `runs/01-merge-check-2.log` and the smoke log `runs/01-merge-smoke-2.log`), and its `## Run` section
+      has an `E2E seam:` line naming `sh e2e.sh`. An open Checkpoint item exists for the
+      ticket 02 decision.

@@ -20,7 +20,8 @@ base="$(git rev-parse HEAD)"
 git switch -q -c sdd/demo
 cp "$here/planted/slug.js" src/slug.js
 cp "$here/planted/slug.test.js" test/slug.test.js
-git add src/slug.js test/slug.test.js
+cp "$here/planted/cli.test.js" test/cli.test.js
+git add src/slug.js test/slug.test.js test/cli.test.js
 git commit -q -m "feat: add uniqueSlug (ticket 02)"
 head="$(git rev-parse --short HEAD)"
 mkdir -p .scratch/demo/runs

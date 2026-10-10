@@ -1,0 +1,63 @@
+schema_version: "1.0"
+name: no-e2e-seam
+description: >
+  The happy-path tickets with a spec whose Testing Decisions name only a unit seam, no
+  end-to-end seam (no command that drives the product the way a user does). /sdd must stop
+  at startup: an open `E2E seam` Checkpoint item in the Ledger, no Gate run, no branch
+  switch, no commits, no Implementer, every ticket still ready-for-agent, and a reply that
+  says the spec names no e2e seam. Grades end state and trace.
+  Needs Bash, so it lives outside the default evals/ suite. Run it with:
+  claude plugin eval . --trust-plugin --eval-dir evals-e2e --case no-e2e-seam --scaffold --allow-tools Bash Write Edit --ablation none
+tags: [e2e]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: /sdd demo
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Bash, Read, Write, Edit, Glob, Grep, Agent, Skill, SendMessage, ToolSearch]
+runs: 1
+graders:
+  - type: regex
+    name: no-commits
+    target: {source: file, path: .git/logs/HEAD}
+    pattern: '\tcommit: '
+    match: count:0
+  - type: regex
+    name: still-on-main
+    target: {source: file, path: .git/HEAD}
+    pattern: 'ref: refs/heads/main'
+  - type: regex
+    name: ticket-01-untouched
+    target: {source: file, path: .scratch/demo/issues/01-unique-slug.md}
+    pattern: 'Status:\**\s*ready-for-agent'
+  - type: regex
+    name: ticket-02-untouched
+    target: {source: file, path: .scratch/demo/issues/02-slugify.md}
+    pattern: 'Status:\**\s*ready-for-agent'
+  - type: regex
+    name: ticket-03-untouched
+    target: {source: file, path: .scratch/demo/issues/03-strip-punctuation.md}
+    pattern: 'Status:\**\s*ready-for-agent'
+  - type: regex
+    name: seam-checkpoint-item-open
+    target: {source: file, path: .scratch/demo/ledger.md}
+    pattern: '(?m)^- \[ \] E2E seam\b'
+  - type: regex
+    name: gate-not-run
+    target: {source: file, path: .gate-result}
+    pattern: '.'
+    match: count:0
+  - type: tool_used
+    name: no-implementer
+    tool: Agent
+    input_match: 'cwi-skills:implementer'
+    min: 0
+    max: 0
+  - type: llm
+    name: reports-missing-seam
+    focus: last_message
+    criteria: >
+      The reply says the run stopped before any work because the spec's Testing Decisions
+      name no end-to-end (e2e) seam, and tells the human to add one to the spec and run
+      /sdd again.

@@ -6,6 +6,9 @@ description: >
   holding the Gate Ruling, and a green Gate. Grades end state only.
   Once all three are done a Branch review must run (code-review on Opus); any bug tickets it
   files may add commits, so the one-commit grader counts only tickets 01-03.
+  The spec names an e2e seam (the slug CLI, `node --test test/cli.test.js`): the Ledger
+  records it, every ticket gets a CLI test, each Implementer report maps every criterion to
+  run evidence, and the Operator's smoke run is logged per ticket under runs/, never /tmp.
   Needs Bash, so it lives outside the default evals/ suite. Run it with:
   claude plugin eval . --trust-plugin --eval-dir evals-e2e --scaffold --allow-tools Bash Write Edit --ablation none
 tags: [e2e]
@@ -81,3 +84,40 @@ graders:
       Every Write or Edit call made by the top-level agent (the Operator, not a dispatched
       subagent) targets a file under `.scratch/demo/`. Calls made inside an Implementer
       subagent do not count.
+  - type: regex
+    name: e2e-seam-recorded
+    target: {source: file, path: .scratch/demo/ledger.md}
+    pattern: 'E2E seam:[^\n]*node --test test/cli\.test\.js'
+  - type: regex
+    name: smoke-logged-01
+    target: {source: file, path: .scratch/demo/runs/01-smoke-0.log}
+    pattern: '# fail 0'
+  - type: regex
+    name: smoke-logged-02
+    target: {source: file, path: .scratch/demo/runs/02-smoke-0.log}
+    pattern: '# fail 0'
+  - type: regex
+    name: smoke-logged-03
+    target: {source: file, path: .scratch/demo/runs/03-smoke-0.log}
+    pattern: '# fail 0'
+  - type: llm
+    name: cli-tests-added
+    focus: {source: file, path: test/cli.test.js}
+    criteria: >
+      The file runs the slug CLI (bin/slug.js) and has tests for `slugify` (including
+      punctuation being dropped) and for `uniqueSlug` with a taken slug.
+  - type: llm
+    name: per-criterion-evidence
+    focus: {source: file, path: .scratch/demo/runs/02-report.md}
+    criteria: >
+      Ticket 02 has exactly one acceptance criterion (`slugify` behaves as described). The
+      report has an Evidence section whose line for that criterion names a specific test
+      (by its test name) or a CLI command, with that test's or command's own result (for
+      example `ok 1 - <name>` or the printed slug), not only a whole-suite summary. The
+      report ends with a STATUS line of DONE.
+  - type: tool_used
+    name: no-scratch-outside-repo
+    tool: Bash
+    input_match: '/tmp/(?!claude-)'
+    min: 0
+    max: 0

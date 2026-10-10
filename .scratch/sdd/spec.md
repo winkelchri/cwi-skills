@@ -77,6 +77,10 @@ Superpowers is not installed. Its useful ideas are built into `/sdd`'s own promp
 52. As a developer, I want the plugin installable from this repo through a local marketplace, so that I can use it on other machines without publishing it.
 53. As a developer, I want `implement-loop` and `wayfinder-loop` retired once `/sdd` works, so that I keep only one orchestrator.
 54. As a developer, I want `/sdd` to play nicely with caveman and mattpocock-skills, with no always-on bootstrap hook, so that my existing setup isn't disrupted.
+55. As a developer, I want every Implementer report to tie each acceptance criterion to evidence from something it ran, and a criterion without run evidence to block `DONE`, so that "done" never rests on reading code (ticket 12).
+56. As a developer, I want the Ticket reviewer to re-run that evidence and to fail a criterion that is asserted but never exercised as a spec problem, so that the fix loop adds the missing test (ticket 12).
+57. As a developer, I want ticket mode to refuse to start until the spec names an end-to-end seam, and tickets that change user-visible behaviour to add tests there that the Gate runs, so that something drives the feature the way a user does (ticket 12).
+58. As a developer, I want the Operator to smoke-run that seam itself after every verified commit, fix round and Merge check, logged under `runs/` and treated like a red Gate when it fails, so that a green unit suite can't hide a broken product (ticket 12).
 
 ## Implementation Decisions
 
@@ -89,6 +93,7 @@ Superpowers is not installed. Its useful ideas are built into `/sdd`'s own promp
   1. Permission mode is auto or another mode that won't prompt, otherwise refuse with guidance.
   2. Resolve the upstream skill paths.
   3. Detect the Gate and record it as a Ruling, asking only if ambiguous.
+  3a. In ticket mode, take the E2E seam from the spec's Testing Decisions and record it as a Ruling; none or ambiguous stops the run at a startup Checkpoint (ticket 12).
   4. Run the Gate and abort if it is red.
   5. Detect the mode: a ticket set means ticket mode, a lone `map.md` means wayfinding mode, anything else is an error that names the planning skills to run first.
 - **Ledger** lives in the feature's `.scratch/<slug>/` folder and is the source of truth for resuming. It records:
@@ -114,14 +119,16 @@ Superpowers is not installed. Its useful ideas are built into `/sdd`'s own promp
 - **Reviewer contract.** The reviewer must:
   - not trust the Implementer's report
   - cite file:line
-  - flag what it cannot verify from the diff
+  - re-run the report's evidence for each criterion, and run focused tests or seam commands as needed (ticket 12)
+  - fail a criterion that is asserted but never exercised as `Missing`; keep `Cannot verify` for what cannot be run here at all, saying why
   - not re-run the full suite
 
   Operator prompts must not pre-judge findings.
 - **Implementer contract.** The Implementer:
   - follows TDD at the spec's seams
   - checks review feedback before applying it
-  - backs every success claim with test evidence
+  - backs every success claim with test evidence, mapping every acceptance criterion to a test or command it ran (ticket 12)
+  - adds or extends a test at the E2E seam for user-visible behaviour
   - never spawns further subagents
   - ends with exactly one of the four statuses
 - **Scheduling.** Dependency order from `Blocked by:` lines, sequential by default. Parallel execution in worktrees is optional and followed by a Merge check.
@@ -156,6 +163,7 @@ Superpowers is not installed. Its useful ideas are built into `/sdd`'s own promp
   3. **Fix loop.** A ticket whose spec contains a trap the reviewer should catch triggers at least one fix round, with the outcome in the Ledger.
   4. **Preflight refusal.** A Gate that is red at the start aborts the run with no commits.
   5. **Wayfinding.** A `map.md` with research tickets ends with them resolved and the map updated.
+- **E2E seam (ticket 12).** Every ticket-mode fixture spec names one: the fixture's slug CLI (`node bin/slug.js <function> [args...]`), driven by `test/cli.test.js`, which the Gate runs; the e2e command is `node --test test/cli.test.js` (`sh e2e.sh` in `smoke-red`, which also runs the CLI over real titles). Graders check per-ticket smoke logs, per-criterion evidence in reports, and review files and traces, never wording. New cases: `no-e2e-seam` (startup Checkpoint, no commits), `unexercised-criterion` (reviewer spec failure closed by a fix round) and `smoke-red` (a failing smoke run fails a Merge check like a red Gate).
 - **Headless caveat.** If `AskUserQuestion` and `PushNotification` don't work in headless eval runs, Checkpoint cases instead grade that the run stopped at a Checkpoint and recorded it in the Ledger.
 - **Spike before building.** Manually confirm that a plugin subagent can call `mattpocock-skills:tdd` by name through the Skill tool. If it can't, fall back to reading by path (ADR-0001) for those skills too.
 - **Prior art.** None in this repo yet. The `claude plugin eval` case format (`evals/**/case.yaml` with graders) is the reference.
@@ -277,3 +285,19 @@ Superpowers is not installed. Its useful ideas are built into `/sdd`'s own promp
   - branch-review, first fixture ($1.16): judgement B4 (accents) was split into decision 08. Re-review 1 marked B1–B3 ADDRESSED and B4 `ticket 07 open`, so the line went to `filed none — round 1` and the run stopped at the Checkpoint. That was correct, but the run could not finish headless, so the spec now settles accents.
   - branch-review, final fixture: session 1 ($1.35) filed B1, B2, M1 and M2 as 04–07 and built them. The Minors of finding tickets 04–06 were deferred, not filed. Re-review 1 reviewed the whole branch and filed M3 as 08 (round 1). 08's Implementer then gave no STATUS line, and the run stalled under the existing rule. Session 2 ($0.50) resumed round 1, reviewed 08 (PASS), ran re-review 2 (clean), set `clean after 2 re-reviews`, and reached the Final Checkpoint with the Gate green and nothing pushed. Graded over both traces: 13/13.
   - Not exercised: the cap after re-review 3, a finding ticket closed with `no change needed`, and a `Cannot verify` line filed as a ticket.
+
+### Build notes (ticket 12)
+
+- **E2E seam at startup.** Ticket mode now has a startup step 6: the E2E seam comes from the spec's Testing Decisions only (never inferred from code), is written to `## Run` as `- E2E seam:` and recorded as a Ruling. None, or several with no `AskUserQuestion`, records an open `E2E seam` Checkpoint item and stops before the Gate runs, so a refused run leaves no Gate result, no branch switch and no commits. The line is written only once a command is chosen: the first headless run wrote `E2E seam: none`, which a resumed run would have kept. The seam command joins the Gate on the allowlist check (startup steps renumbered: allowlist 7, Gate green 8, branch 9, parallel 10).
+- **Smoke run.** The Operator runs the seam command after verifying a build commit (`runs/NN-smoke-0.log`), after each fix round (`runs/NN-smoke-F.log`) and in each Merge check attempt (`runs/NN-merge-smoke-A.log`, next to `NN-merge-check-A.log`). Wherever the skill checks the Gate after an Implementer's work, a failing smoke run counts as red. A Merge check with no conflicts has no Implementer: attempt 1 checks the merge as it stands, and attempt 2's merge brief carries no conflicted paths, only the failing logs. Operator scratch output must stay under `runs/`, never `/tmp`.
+- **Run evidence.** The Implementer runs every acceptance criterion (the one test that covers it, or a seam command; the whole suite passing is not evidence) and writes an `## Evidence` section, one line per criterion; the report ends with its `STATUS:` line. A criterion with no run evidence means `DONE_WITH_CONCERNS` or `NEEDS_CONTEXT`. In the first mixed run the Operator's brief told the Implementer to "leave" a human-only criterion, and the Implementer reported plain `DONE`; briefs must now carry the ticket's criteria as they stand.
+- **Reviewer runs.** The Ticket reviewer gets the Gate and seam commands in its brief, re-runs each evidence line, may run focused tests and seam commands (never the full suite), and writes an `## Evidence` section. An asserted but unexercised criterion, or user-visible behaviour with no test at the E2E seam, is `Missing`. `Cannot verify` (was `Cannot verify from diff`) is only for what cannot be run here at all, with the reason.
+- **Fixtures.** Every ticket-mode fixture has the slug CLI `bin/slug.js` (calls the named export of `src/slug.js`, JSON-parsing arguments) and `test/cli.test.js`, which the Gate runs; specs name `node --test test/cli.test.js` as the e2e command. The planted commits in `fix-loop` and `branch-review` add CLI tests, so the cases stay about their own traps. `smoke-red` needs a real worktree for its planted branch: with only a bare branch, the auto-mode classifier denied `git merge` of it as untrusted code. The wayfinding fixture has no spec (map only) and needs no seam.
+- **Verified headless** (`run-case.sh`, Sonnet Operator). The full suite ran once after the change ($11.2): 8 of 12 cases passed. The four failures were fixed and rerun:
+  - smoke-red: the classifier denied the merge.
+  - mixed: the brief pre-judged a criterion.
+  - happy-path: the evidence named the whole suite.
+  - branch-review: no PR command was given.
+
+  smoke-red, mixed and happy-path then passed. branch-review did not pass in four more runs. Twice a Branch-review judgement call (in one, an Implementer's amended commit) stopped the run at a Checkpoint. Once a spec edit turned the planted Minor into a B finding; that edit was reverted. Once it passed everything but the PR command. The skill now requires the commands headless, and re4 showed that works. Grader output is in ticket 12's Comments.
+- **Fixture CLI.** `bin/slug.js` JSON-parses only arguments that start with `[` or `{`. A Branch reviewer found that the title `2024` used to become a number and crash `slugify`.

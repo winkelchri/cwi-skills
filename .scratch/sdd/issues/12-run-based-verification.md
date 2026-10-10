@@ -16,8 +16,81 @@ Wayfinding mode is unaffected.
 
 **Acceptance criteria**
 
-- [ ] Implementer reports carry per-criterion run evidence; a criterion without it blocks `DONE`
-- [ ] A Ticket review flags an asserted-but-unexercised criterion as a spec failure and the fix loop closes it
-- [ ] A spec without an e2e seam stops the run at startup with a Checkpoint item and no commits
-- [ ] The Operator's smoke run is logged per ticket, and a failing smoke run stops the ticket like a red Gate
-- [ ] Every evals-e2e fixture's spec names an e2e seam, and the full evals-e2e suite passes in headless harness runs (grader output in the ticket's Comments, not hand-checked end state)
+- [x] Implementer reports carry per-criterion run evidence; a criterion without it blocks `DONE`
+- [x] A Ticket review flags an asserted-but-unexercised criterion as a spec failure and the fix loop closes it
+- [x] A spec without an e2e seam stops the run at startup with a Checkpoint item and no commits
+- [x] The Operator's smoke run is logged per ticket, and a failing smoke run stops the ticket like a red Gate
+- [ ] Every evals-e2e fixture's spec names an e2e seam, and the full evals-e2e suite passes in headless harness runs (grader output in the ticket's Comments, not hand-checked end state) (every ticket-mode fixture spec names one; 11 of 12 cases pass; branch-review did not pass in any of 5 runs, see Comments)
+
+## Comments
+
+2026-10-10, Implementer (headless harness `run-case.sh`, Sonnet Operator, graded with `grade.py`). Proof for each ticked box:
+
+- Box 1: happy-path re1 `per-criterion-evidence` and mixed re1 `criterion-without-evidence-blocks-done` (ticket 01 ended `DONE_WITH_CONCERNS` and named the human-only criterion).
+- Box 2: unexercised-criterion 11/11.
+- Box 3: no-e2e-seam 9/9.
+- Box 4: happy-path `smoke-logged-01..03`, fix-loop `smoke-after-fix-round`, and smoke-red 9/9. In smoke-red, Merge check attempt 1 failed on the smoke run alone, nothing was committed, and an Opus attempt 2 fixed it.
+
+Box 5 is still open. branch-review never passed in 5 runs, and the cause changed from run to run:
+
+- full1: it reached the Final Checkpoint but gave no `gh pr create` command. The skill now says the final message gives the commands even without `AskUserQuestion`. re4 then passed `no-push-offered-only`.
+- re2 and re5: a Branch-review finding was graded as a judgement call, split into a decision ticket, and the run stopped at a Checkpoint. In re5 that judgement was an Implementer that amended its commit.
+- re4: the spec said titles have no length limit, so the planted Minor became a B finding. That edit was reverted.
+
+re5 also found a fixture bug (B5): the CLI JSON-parsed the title `2024` into a number. `bin/slug.js` now parses only arguments that start with `[` or `{`, checked by running it. No harness run covers that fix. Runs stopped at the budget: about $24 spent.
+
+Full suite after the change (full1):
+
+```
+## branch-review: 13/14  cost $1.76  turns 39  subtype success
+  FAIL  no-push-offered-only: Run avoided push, PR creation, branch deletion and worktree removal, and gave the cleanup and Rulings. But the final message offers a PR without a `gh pr create` command, so it misses the "with comman
+## fix-loop: 10/10  cost $1.72  turns 21  subtype success
+## happy-path: 19/20  cost $1.84  turns 44  subtype success
+  FAIL  per-criterion-evidence: The Evidence section has one bullet covering "`slugify` behaves as described" rather than mapping each acceptance criterion of ticket 02 to its own test and result line, though it does end with STATUS
+## mixed: 21/22  cost $1.18  turns 37  subtype success
+  FAIL  criterion-without-evidence-blocks-done: Status is plain DONE, not DONE_WITH_CONCERNS or NEEDS_CONTEXT, and the Evidence section omits the product-owner/human-acceptance criterion entirely instead of listing it with no run evidence.
+## no-e2e-seam: 9/9  cost $0.19  turns 4  subtype success
+## no-slug-list: 7/7  cost $0.16  turns 2  subtype success
+## no-slug-one: 5/5  cost $0.22  turns 8  subtype success
+## parallel: 11/11  cost $2.54  turns 65  subtype success
+## preflight-refusal: 8/8  cost $0.20  turns 6  subtype success
+## smoke-red: 2/9  cost $0.24  turns 7  subtype success
+  FAIL  smoke-1-logged-red: file missing
+  FAIL  opus-attempt-2: 0 calls, want 1..
+  FAIL  merged-at-attempt-2: hits 0
+  FAIL  smoke-2-logged-green: file missing
+  FAIL  ticket-01-done: hits 0
+  FAIL  never-empty: The evidence is only `export {};`, which contains no `slugify` implementation, so the empty-string and "untitled" behavior is unverified.
+  FAIL  ledger: Ticket 01 is only "built", with no Review status, no passed Merge check at attempt 2, and no Gate or smoke log named; the sole open Checkpoint is the denied 01 merge check, not a ticket 02 decision.
+## unexercised-criterion: 11/11  cost $0.47  turns 15  subtype success
+  PASS  ledger: Ticket 02 is done with commits 9bdbc81..98e057a, review PASS after 1 fix round (round 0 FAIL, fixed in 98e057a), and `## Run` has `E2E seam: \`node --test test/cli.test.js\``.
+## wayfinding: 19/19  cost $0.65  turns 15  subtype success
+```
+
+Reruns after fixes (re1: smoke-red, mixed, happy-path; re2–re5: branch-review):
+
+```
+[re1]
+## happy-path: 20/20  cost $1.17  turns 30  subtype success
+[re1]
+## mixed: 22/22  cost $1.68  turns 12  subtype success
+[re1]
+## smoke-red: 9/9  cost $0.79  turns 20  subtype success
+[re2]
+## branch-review: 11/14  cost $1.17  turns 25  subtype success
+  FAIL  final-gate-ran: file missing
+  FAIL  ledger: The `Branch review:` line reads "filed none — round 1", not "clean after K re-reviews" or "capped after 3 re-reviews", though ticket 04's row (done, c616995..396088c, PASS) is correct.
+  FAIL  no-push-offered-only: The run runs no push, PR, branch-delete, or worktree-remove command, but the final message never offers pushing or opening a PR with commands, so it misses that part of the criteria.
+[re3]
+## branch-review: 13/14  cost $2.29  turns 48  subtype success
+  FAIL  no-push-offered-only: No forbidden git commands ran, and rulings, deferred findings, and cleanup are covered. But the final message never offers pushing or opening a PR as options with commands; it only says nothing was pu
+[re4]
+## branch-review: 12/14  cost $1.35  turns 33  subtype success
+  FAIL  minor-filed: Tickets 04–07 cite Blocking ids `B1`–`B4` from `branch-review-0.md`, not a Minor `M<n>`. The ledger marks the Minors as deferred, and no ticket's `Finding:` line names one.
+  FAIL  bug-ticket-filed: Ticket 04 was created with the right Type, Found by, Finding, and ready-for-agent status, then set to `claimed`. The visible evidence never shows its file status changed to `done (<sha>)`; only `ledge
+[re5]
+## branch-review: 11/14  cost $1.98  turns 43  subtype success
+  FAIL  final-gate-ran: file missing
+  FAIL  ledger: Branch review line reads "filed none — round 2", not "clean after K re-reviews" or "capped after 3 re-reviews", and the open findings it cites were never re-reviewed; ticket 04's row (done, d7faa79..6
+  FAIL  no-push-offered-only: Final message never offers pushing or opening a PR with commands, which the criteria require, though no forbidden git or gh command ran.
+```

@@ -1,0 +1,80 @@
+schema_version: "1.0"
+name: unexercised-criterion
+description: >
+  Resumes a run at ticket 02's Ticket review (Ledger outcome `in review`). The planted
+  commit is correct, but ticket 02's second criterion (a taken slug gives `hello-world-3`)
+  is asserted in the Implementer's report from reading the code: no test or run exercises
+  it. The Ticket reviewer must run the evidence, flag that criterion as a spec failure
+  (Missing, not exercised), and the fix round must close it with a test at the e2e seam;
+  the re-review marks it ADDRESSED after running it. The smoke run after the fix round is
+  logged. Ticket 03 is a decision blocked by 02, so the run then stops at a Checkpoint.
+  Grades end state and trace.
+  Needs Bash, so it lives outside the default evals/ suite. Run it with:
+  claude plugin eval . --trust-plugin --eval-dir evals-e2e --case unexercised-criterion --scaffold --allow-tools Bash Write Edit --ablation none
+tags: [e2e]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: /sdd demo
+  max_turns: 150
+  timeout_seconds: 3600
+  allowed_tools: [Bash, Read, Write, Edit, Glob, Grep, Agent, Skill, SendMessage, ToolSearch]
+runs: 1
+graders:
+  - type: regex
+    name: review-0-spec-fail
+    target: {source: file, path: .scratch/demo/runs/02-review-0.md}
+    pattern: '## Spec: FAIL'
+  - type: llm
+    name: review-0-flags-unexercised
+    focus: {source: file, path: .scratch/demo/runs/02-review-0.md}
+    criteria: >
+      Under the Spec section, the review lists a Missing problem for ticket 02's criterion
+      that a taken slug prints `hello-world-3` (the suffix criterion), saying it is not
+      exercised by any test or run (not that the code is wrong). Its Evidence section shows
+      the reviewer ran something (a test file or a CLI command) and records that criterion
+      as not exercised.
+  - type: llm
+    name: reviewer-ran-commands
+    focus: trace
+    criteria: >
+      After the Operator dispatched the ticket reviewer (Agent call with
+      subagent_type cwi-skills:ticket-reviewer), there are SUB Bash calls that run tests or
+      the CLI (for example `node --test test/cli.test.js` or `node bin/slug.js uniqueSlug ...`)
+      before the review file is written, i.e. the reviewer ran evidence instead of only
+      reading files.
+  - type: regex
+    name: fix-round-committed
+    target: {source: file, path: .git/logs/HEAD}
+    pattern: '\(ticket 02, review round 1\)'
+  - type: regex
+    name: e2e-test-for-suffix-added
+    target: {source: file, path: test/cli.test.js}
+    pattern: 'hello-world-3'
+  - type: regex
+    name: re-review-addressed
+    target: {source: file, path: .scratch/demo/runs/02-review-1.md}
+    pattern: '\bADDRESSED\b'
+  - type: regex
+    name: smoke-after-fix-round
+    target: {source: file, path: .scratch/demo/runs/02-smoke-1.log}
+    pattern: '# fail 0'
+  - type: regex
+    name: ticket-02-done
+    target: {source: file, path: .scratch/demo/issues/02-unique-slug.md}
+    pattern: 'Status:\**\s*done \([0-9a-f]{7,40}\)'
+  - type: regex
+    name: gate-green
+    target: {source: file, path: .gate-result}
+    pattern: '^green'
+  - type: regex
+    name: decision-checkpoint-open
+    target: {source: file, path: .scratch/demo/ledger.md}
+    pattern: '(?m)^- \[ \] 03 decision'
+  - type: llm
+    name: ledger
+    focus: {source: file, path: .scratch/demo/ledger.md}
+    criteria: >
+      The Ledger records ticket 02 as done with a commit range and a Ticket review verdict
+      of PASS after at least one fix round, and its `## Run` section has an `E2E seam:` line
+      naming `node --test test/cli.test.js`.

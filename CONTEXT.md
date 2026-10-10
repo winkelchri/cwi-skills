@@ -76,6 +76,18 @@ _Avoid_: Assumption, decision log entry
 The project's typecheck and test suite. Work counts as done only once the Gate is green.
 _Avoid_: CI, checks, verification
 
+**E2E seam**:
+The one command, named in the spec's Testing Decisions, that drives the product the way a user does: a CLI invocation, an HTTP call, a browser test, an eval case. Ticket mode does not start without one. Tickets that change user-visible behaviour add tests at it, and the Gate runs them.
+_Avoid_: Integration test, acceptance test
+
+**Smoke run**:
+The Operator running the E2E seam command itself after each verified Implementer commit, fix round and Merge check, logged under `.scratch/<slug>/runs/`. A failing smoke run counts as a red Gate.
+_Avoid_: Sanity check, e2e check
+
+**Run evidence**:
+Output of something that ran (a test name with its result line, or a command with its output) tied to one acceptance criterion. Reading code is not run evidence. An Implementer's `DONE` needs it for every criterion, and the Ticket reviewer re-runs it; a criterion asserted but never exercised is a spec failure.
+_Avoid_: Proof, verification by inspection
+
 **Ticket review**:
 Review of one Implementer's diff against its Ticket, judging spec compliance and code quality.
 _Avoid_: Task review, per-commit review

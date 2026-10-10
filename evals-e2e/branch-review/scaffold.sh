@@ -20,7 +20,7 @@ base="$(git rev-parse HEAD)"
 git switch -q -c sdd/demo
 
 commit() { # <ticket> <subject>
-  git add src/slug.js test/slug.test.js
+  git add src/slug.js test/slug.test.js test/cli.test.js
   git commit -q -m "$2 (ticket $1)"
   sha="$(git rev-parse --short HEAD)"
   sed -i "s/^\*\*Status:\*\* ready-for-agent/**Status:** done ($sha)/" .scratch/demo/issues/"$1"-*.md
@@ -44,6 +44,12 @@ test("slugify lowercases, trims and joins words with one hyphen", () => {
   assert.equal(slugify("  Hello   World "), "hello-world");
 });
 JS
+cat >> test/cli.test.js <<'JS'
+
+test("slug slugify prints the slug of a title", () => {
+  assert.equal(slugCli("slugify", "  Hello   World "), "hello-world");
+});
+JS
 commit 02 "feat: add slugify"
 
 cat > src/slug.js <<'JS'
@@ -61,6 +67,12 @@ cat >> test/slug.test.js <<'JS'
 
 test("slugify drops punctuation", () => {
   assert.equal(slugify("Hello, World!"), "hello-world");
+});
+JS
+cat >> test/cli.test.js <<'JS'
+
+test("slug slugify drops punctuation", () => {
+  assert.equal(slugCli("slugify", "Hello, World!"), "hello-world");
 });
 JS
 commit 03 "feat: strip punctuation in slugify"
@@ -82,6 +94,12 @@ test("uniqueSlug appends the first free suffix", () => {
   assert.equal(uniqueSlug("Hello World", []), "hello-world");
   assert.equal(uniqueSlug("Hello World", ["hello-world"]), "hello-world-2");
   assert.equal(uniqueSlug("Hello World", ["hello-world", "hello-world-2"]), "hello-world-3");
+});
+JS
+cat >> test/cli.test.js <<'JS'
+
+test("slug uniqueSlug prints the first free slug", () => {
+  assert.equal(slugCli("uniqueSlug", "Hello World", '["hello-world"]'), "hello-world-2");
 });
 JS
 commit 01 "feat: add uniqueSlug"

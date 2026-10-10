@@ -12,7 +12,7 @@ The check is the plugin hook `hooks/sdd-permission-preflight.sh`. It runs when `
 | `acceptEdits` | starts only with the allowlist below; edits are already accepted |
 | `plan` | refuses: plan mode runs nothing |
 
-With the allowlist, the Operator also checks that every Gate command it detects is on it before it runs anything.
+With the allowlist, the Operator also checks that every Gate command it detects, and the spec's E2E seam command, is on it before it runs anything.
 
 ## Preferred: auto mode
 
@@ -58,6 +58,6 @@ What each group is for:
 - **Git.** Inspecting history, switching to the `sdd/<slug>` branch, staging and committing. Nothing that pushes, resets or deletes: those stay prompted, as they should.
 - **Wayfinding.** A run on a wayfinding map commits nothing and runs no Gate, but its Scouts research. Add `"Skill(mattpocock-skills:research)"`, plus `"WebFetch"` and `"WebSearch"` when the map's research needs the web.
 - **Parallel tickets.** `/sdd <slug> --parallel` also merges worktree branches back and resolves conflicts with an upstream skill. Add `"Bash(git merge:*)"`, `"Bash(git worktree:*)"` and `"Skill(mattpocock-skills:resolving-merge-conflicts)"`. Each worktree is a fresh checkout under `.claude/worktrees/`, without ignored files such as installed dependencies, so use it only where the Gate runs in a fresh checkout.
-- **Gate.** Replace `Bash(npm test:*)` with this project's Gate commands, one entry each: for example `Bash(npm run typecheck:*)`, `Bash(cargo test:*)`, `Bash(pytest:*)`, `Bash(make check:*)`. The Implementer may also run single test files while it works, so allow your test runner's direct command too (for example `Bash(node --test:*)`).
+- **Gate and E2E seam.** Replace `Bash(npm test:*)` with this project's Gate commands, plus the E2E seam command the spec names (the Operator runs it as a smoke run after each ticket), one entry each: for example `Bash(npm run typecheck:*)`, `Bash(cargo test:*)`, `Bash(pytest:*)`, `Bash(make check:*)`. The Implementer may also run single test files while it works, so allow your test runner's direct command too (for example `Bash(node --test:*)`).
 
 Do not add `Bash(git push:*)`, `Bash(git reset:*)` or a blanket `Bash`. Push, PR creation and cleanup are offered to you at the end of a run, never done by it.

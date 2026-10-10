@@ -9,6 +9,8 @@ description: >
   on the run branch) and leave 05 waiting for the human's choice, leave 03 and 06
   untouched because they wait on a decision, run the Gate and stop at a Checkpoint
   recorded in the Ledger. Headless runs have no AskUserQuestion, so the run stops there.
+  Ticket 01 also carries a criterion only a human can check (the product owner reads live
+  slugs): with no run evidence for it, its Implementer must not report plain DONE.
   Grades end state only.
   Needs Bash, so it lives outside the default evals/ suite. Run it with:
   claude plugin eval . --trust-plugin --eval-dir evals-e2e --case mixed --scaffold --allow-tools Bash Write Edit --ablation none
@@ -113,3 +115,16 @@ graders:
       length; and an open Checkpoint item for the ticket 05 prototype that names the
       branch prototype/separator, says how to run the prototype, and names the hyphen
       and underscore variants to choose between.
+  - type: llm
+    name: criterion-without-evidence-blocks-done
+    focus: {source: file, path: .scratch/demo/runs/01-report.md}
+    criteria: >
+      The report has an Evidence section with one line per acceptance criterion of ticket
+      01. The `slugify` criterion names a test or command with its result line. The
+      product-owner criterion is listed with no run evidence. The report's STATUS line is
+      DONE_WITH_CONCERNS or NEEDS_CONTEXT and names the product-owner criterion; it is not
+      plain DONE.
+  - type: regex
+    name: smoke-run-logged
+    target: {source: file, path: .scratch/demo/runs/01-smoke-0.log}
+    pattern: '# fail 0'

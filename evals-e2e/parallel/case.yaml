@@ -61,3 +61,11 @@ graders:
       The Ledger's `## Run` section has `Parallel: on`. Tickets 01 and 02 are recorded as done,
       each with a worktree branch and a Merge check that passed with a log path. Ticket 03 is
       recorded as done with a commit sha. No Checkpoint item names a merge check.
+  - type: regex
+    name: merge-smoke-01
+    target: {source: file, path: .scratch/demo/runs/01-merge-smoke-1.log}
+    pattern: '# fail 0'
+  - type: regex
+    name: merge-smoke-02
+    target: {source: file, path: .scratch/demo/runs/02-merge-smoke-1.log}
+    pattern: '# fail 0'

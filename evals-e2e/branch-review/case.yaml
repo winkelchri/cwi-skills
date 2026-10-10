@@ -101,3 +101,7 @@ graders:
       commands) without performing them, and offers cleanup of prototype branches and
       worktrees, or says none is needed when the run created none, and lists the Rulings and the open deferred
       findings (or says there are none).
+  - type: regex
+    name: smoke-logged-04
+    target: {source: file, path: .scratch/demo/runs/04-smoke-0.log}
+    pattern: '# fail 0'
