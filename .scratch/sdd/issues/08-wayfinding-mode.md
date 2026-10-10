@@ -26,3 +26,5 @@ This replaces the behaviour of the old `wayfinder-loop`.
 - "Newest installed version" was checked with only one installed version (1.2.3), so picking between versions was not exercised.
 - Not exercised: a Scout reporting HITL or FAILED, a failed verification, a Scout changing the repo (stall), resuming an interrupted `dispatched` ticket, Map updates that add tickets, graduate fog or rule a ticket out of scope, the `Map` item for leftover fog, the Ledger rename when a map folder gains implementation tickets, and the stall count.
 - Known gaps: in Manual or acceptEdits mode the permission hook still requires `Bash(git commit:*)`, which wayfinding never uses. `/to-tickets` numbers from `01`, so implementation tickets written into a map folder can collide with map ticket numbers.
+
+- implement-loop: closed by commit cc24a79 (gate green: validate ok, default eval suite 3/3). Wayfinding e2e case verified by 2 headless runs only.
