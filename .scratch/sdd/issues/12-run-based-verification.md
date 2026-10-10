@@ -20,7 +20,7 @@ Wayfinding mode is unaffected.
 - [x] A Ticket review flags an asserted-but-unexercised criterion as a spec failure and the fix loop closes it
 - [x] A spec without an e2e seam stops the run at startup with a Checkpoint item and no commits
 - [x] The Operator's smoke run is logged per ticket, and a failing smoke run stops the ticket like a red Gate
-- [x] Every evals-e2e fixture's spec names an e2e seam, and the full evals-e2e suite passes in headless harness runs (grader output in the ticket's Comments, not hand-checked end state) (every ticket-mode fixture spec names one; 11 of 12 cases pass; branch-review did not pass in any of 5 runs, see Comments)
+- [x] Every evals-e2e fixture's spec names an e2e seam, and the full evals-e2e suite passes in headless harness runs (grader output in the ticket's Comments, not hand-checked end state) (all 12 cases green in one run, runs-all5; see Comments)
 
 ## Comments
 
