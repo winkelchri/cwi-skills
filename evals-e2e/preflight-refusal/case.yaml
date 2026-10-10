@@ -46,6 +46,7 @@ graders:
     name: no-implementer
     tool: Agent
     input_match: 'cwi-skills:implementer'
+    min: 0
     max: 0
   - type: llm
     name: reports-red-gate

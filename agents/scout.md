@@ -34,10 +34,11 @@ Your prompt names a brief file. Read it. It gives the map, your ticket, the path
    ```
 
    Propose a new ticket only for a question the answer has made sharp; a question still too vague to state precisely is fog, not a ticket. One line per item; `none` where there is nothing.
+6. **Check** before your final message: when resolved, re-read your ticket and confirm it has both the `## Answer` section and `Status: resolved`. Fix whichever is missing.
 
 ## Final message
 
-At most five lines of summary, then exactly one last line:
+At most five lines of summary, then exactly one last line. Never end without it: the Operator counts a final message with no `STATUS:` line as `FAILED`.
 
 ```
 STATUS: <RESOLVED | HITL | FAILED> — <one-line gist of the answer, or the reason>
