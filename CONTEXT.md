@@ -32,6 +32,10 @@ _Avoid_: Autonomous ticket, agent ticket
 A Ticket containing a decision only the human can make. The Operator splits off any agent-verifiable work so the human is left with only the decision; a HITL ticket with no real decision in it is reclassified as AFK.
 _Avoid_: Manual ticket, human ticket
 
+**Prototype ticket**:
+A Ticket (`Type: prototype`) whose decision is best made by trying throwaway code. An Implementer builds its variants on a `prototype/<name>` branch, which never lands on the feature branch; the human picks a variant at a Checkpoint, and the choice is written back to the Ticket.
+_Avoid_: Spike ticket, experiment
+
 **Checkpoint**:
 A pause where the Operator presents the human with a batch of pending HITL decisions, prototype selections or escalations, after the integrated branch has passed the Gate. The run continues on every Ticket not blocked by a pending Checkpoint.
 _Avoid_: Stopgap, check-in, approval gate

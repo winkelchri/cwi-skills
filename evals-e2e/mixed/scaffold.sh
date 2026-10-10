@@ -2,7 +2,7 @@
 # Builds the mixed fixture repo in the eval workspace (the current directory): the
 # happy-path project files with this case's own spec and tickets. Ticket 02 is HITL with
 # agent work plus a real decision and blocks ticket 03; ticket 04 is labelled HITL but
-# holds no decision.
+# holds no decision; ticket 05 is a prototype ticket that blocks ticket 06.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 cp -R "$here/../happy-path/fixture/." .

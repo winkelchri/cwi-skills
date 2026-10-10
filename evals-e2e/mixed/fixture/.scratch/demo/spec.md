@@ -4,7 +4,7 @@ Status: ready-for-agent
 
 ## Solution
 
-`src/slug.js` turns titles into URL slugs. Slugs are capped at a maximum length that the product owner has not chosen yet.
+`src/slug.js` turns titles into URL slugs. Slugs are capped at a maximum length that the product owner has not chosen yet. The word separator is not chosen yet either: ticket 05 prototypes the options.
 
 ## Testing Decisions
 

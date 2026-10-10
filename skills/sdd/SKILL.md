@@ -14,10 +14,10 @@ No slug given → reply `Usage: /sdd <slug>` and stop.
 - **State files** are the only files you write: everything under `<dir>` (spec, tickets, `ledger.md`, `runs/`). Product code, tests, config and commits belong to the Implementer. State files stay uncommitted in the working tree. Scratch output, such as saved Gate logs, goes under `<dir>/runs/` too.
 - **Safety rules** — you follow them, and every brief carries them word for word:
 
-  > No `git push` or force-push. No `git reset`, no branch deletion, no history rewriting. No reading or writing files outside this repository; the one exception is reading installed skills under `~/.claude/plugins/`.
+  > No `git push` or force-push. No `git reset`, no branch deletion, no history rewriting. No merging, rebasing or cherry-picking a `prototype/*` branch into any other branch. No reading or writing files outside this repository; the one exception is reading installed skills under `~/.claude/plugins/`.
 
 - **Ruling**: any judgement call you make without the human goes into the Ledger as `<what> — <why> — <cost if wrong>`.
-- **Checkpoint item**: anything only the human can settle — a decision ticket, an escalated ticket, an ambiguous Gate. Record each as an open line under `## Checkpoints` in the Ledger: `- [ ] <id> — <question> — <context path>`, where `<id>` is the ticket number and kind (`05 decision`, `03 NEEDS_CONTEXT`, `03 stuck`) or `Gate`. Items wait for the next [Checkpoint](#checkpoint); only startup items are asked at once, because no work can start without them.
+- **Checkpoint item**: anything only the human can settle — a decision ticket, a prototype's variants to choose from, an escalated ticket, an ambiguous Gate. Record each as an open line under `## Checkpoints` in the Ledger: `- [ ] <id> — <question> — <context path>`, where `<id>` is the ticket number and kind (`05 decision`, `05 prototype`, `03 NEEDS_CONTEXT`, `03 stuck`) or `Gate`. Items wait for the next [Checkpoint](#checkpoint); only startup items are asked at once, because no work can start without them.
 - **Notifications** — `PushNotification`, loaded through ToolSearch if it is deferred — go out for exactly three events: Checkpoint items waiting, run done, run stalled. Nothing else notifies. A notification tool that is missing, or answers that it did not send, changes nothing: carry on.
 - **Asking** uses `AskUserQuestion`. If that tool is unavailable (headless runs), the items stay open in the Ledger and the run stops at the Checkpoint. A missing tool is a Checkpoint, never an error.
 
@@ -30,7 +30,7 @@ Each check below can refuse the run. A refusal stops before any ticket is claime
 
    > `.scratch/<slug>/` holds neither tickets nor a wayfinding map. Plan the feature first: `/to-spec` then `/to-tickets` for a feature you can describe, or `/wayfinder` to map an effort that is still unclear. Then run `/sdd <slug>` again.
 
-3. **Ledger.** `<dir>/ledger.md` exists → this is a resumed run: reuse its branch, Gate and skills root, and take the Ledger and the tickets' `Status:` lines as they stand. Done tickets are never worked again; open Checkpoint items wait for the next Checkpoint, except an open `Run stalled` item, which this restart answers: tick it. A Ledger left by a run that aborted at startup records no run branch yet; step 8 still applies. Otherwise create it from [the template](#ledger-template).
+3. **Ledger.** `<dir>/ledger.md` exists → this is a resumed run: reuse its branch, Gate and skills root, and take the Ledger and the tickets' `Status:` lines as they stand. Done tickets are never worked again; open Checkpoint items wait for the next Checkpoint, except an open `Run stalled` item, which this restart answers: tick it. A Ledger left by a run that aborted at startup records no run branch yet; step 8 still applies. If the current branch is a `prototype/*` branch, an interrupted [prototype build](#build-a-prototype) left it: with the tree clean outside `<dir>`, switch back to the Ledger's run branch; otherwise stop and name the uncommitted paths. Otherwise create it from [the template](#ledger-template).
 4. **Skills root.** Record the newest `~/.claude/plugins/cache/*/mattpocock-skills/<version>/skills/` in the Ledger (ADR-0001: user-only upstream skills are read by path from there).
 5. **Gate** — the project's typecheck plus full test suite. Look in `CLAUDE.md`, `AGENTS.md`, then manifests (`package.json` scripts, `Makefile`, `pyproject.toml`, `Cargo.toml`, `go.mod`). One clear set of commands → use it. Conflicting candidates, or none → ambiguous: ask now with `AskUserQuestion`, one option per candidate (no tool → record the `Gate` item and stop). Record the chosen Gate as a Ruling naming its source, for example: Gate is `npm test` — package.json "test" script, no typecheck configured — cost if wrong: broken work counted as done.
 6. **Gate on the allowlist.** Only with a preflight note from step 1: every Gate command must match one of its allowed Bash entries (`Bash(npm test:*)` covers `npm test`). Any missing → stop, name the entries to add to `.claude/settings.local.json`, and point the user to `${CLAUDE_SKILL_DIR}/permissions.md` (give the path, don't read it). The run would otherwise stall on the first Gate run inside an Implementer.
@@ -41,9 +41,10 @@ Each check below can refuse the run. A refusal stops before any ticket is claime
 
 For each ticket read its number `NN` (filename prefix), its `Status:` line, its `Blocked by:` line (ticket numbers; "None" means no blockers) and its `Type:` line if any.
 
-1. **HITL triage.** Every `ready-for-human` ticket without `Type: decision` goes through [HITL triage](#hitl-triage) first, blocked or not.
-2. **Offline answers.** A `Type: decision` ticket with an `## Answer` section whose status is not yet `done` was answered outside the run: set its `Status:` to `done (decision)` and tick its Ledger item. That counts as progress.
-3. **Workable.** A ticket is workable when its status is `ready-for-agent` (or `claimed` with no Ledger outcome, left over from an interrupted run), every blocker's status starts with `done`, and its Ledger outcome is absent or `reopened`. Take the lowest-numbered workable ticket. Dependencies set the order, never numbering alone. Tickets blocked by an open decision or an escalated ticket stay untouched; everything else keeps running.
+1. **HITL triage.** Every `ready-for-human` ticket without `Type: decision` or `Type: prototype` goes through [HITL triage](#hitl-triage) first, blocked or not.
+2. **Prototype tickets** need no triage: building the prototype is agent work, choosing a variant is the human's. A `Type: prototype` ticket that is `ready-for-human` and has no `## Prototype` section yet is set to `ready-for-agent`.
+3. **Offline answers.** A `Type: decision` ticket, or a `Type: prototype` ticket with a `## Prototype` section, that has an `## Answer` section and whose status is not yet `done` was answered outside the run (answers are appended at the end of the file, so find them with `grep -l '^## Answer' <dir>/issues/*.md`, never from a partial read): set its `Status:` to `done (decision)` or `done (prototype)`, update a prototype's Ledger row to outcome `done` with the chosen variant, and tick its Ledger item. That counts as progress.
+4. **Workable.** A ticket is workable when its status is `ready-for-agent` (or `claimed` with no Ledger outcome, left over from an interrupted run), every blocker's status starts with `done`, and its Ledger outcome is absent or `reopened`. Take the lowest-numbered workable ticket. Dependencies set the order, never numbering alone. Tickets blocked by an open decision, an unchosen prototype or an escalated ticket stay untouched; everything else keeps running. A workable `Type: prototype` ticket goes to [Build a prototype](#build-a-prototype), every other one to [Work one ticket](#work-one-ticket).
 
 A `claimed` ticket whose Ledger outcome is `in review` was interrupted after its build commit passed verification: it comes before any workable ticket. Resume it in the [review and fix loop](#review-and-fix-loop) with `base` from its Ledger row: no `<dir>/runs/NN-review-*.md` yet → step 1 with `R = 0`; otherwise take its newest review `NN-review-R.md` and act on that review's verdict line from step 5. Its Implementer cannot be resumed, so its fix rounds 1–3 go to a fresh Sonnet Implementer.
 
@@ -71,7 +72,7 @@ A `Type: decision` ticket whose blockers are all done becomes a Checkpoint item:
    - the Gate commands
    - the branch, and the commit subject format `<type>: <summary> (ticket NN)`
    - the report path `<dir>/runs/NN-report.md`
-   - the paths of any decision tickets among its blockers: their `## Answer` sections are decisions the ticket builds on
+   - the paths of any decision or prototype tickets among its blockers: their `## Answer` sections are decisions the ticket builds on. A prototype's chosen variant lives on the branch its `## Prototype` section names; the Implementer may read it with `git show <branch>:<path>` and rebuild what it needs test-first, never merge it
    - for a split ticket: build only its `## Agent part`
    - the skills root
    - the safety rules, word for word
@@ -88,6 +89,27 @@ A `Type: decision` ticket whose blockers are all done becomes a Checkpoint item:
    | any other status, or a failed check | new commits | back to `ready-for-agent` | Ledger row naming the status or failed check, and the commit range. [Stop as stalled](#stalls): later tickets would build on unverified work. |
 
 5. Tell the user one line: `NN <title>: <ticket status or outcome>`. Unless the table sent you to the review, [count the attempt](#stalls) and pick the next ticket.
+
+## Build a prototype
+
+A prototype ticket asks a question best answered by trying throwaway code. An Implementer builds the variants with `mattpocock-skills:prototype` on a branch of their own; the human compares them at a Checkpoint and picks one. Prototype code never lands on the run branch. It gets no Ticket review: it is throwaway, and the human judges it.
+
+1. **Claim.** Set its `Status:` to `claimed`. `<name>` is the rest of the ticket's filename (`05-separator.md` → `separator`). Note `run = git rev-parse HEAD` on the run branch.
+2. **Branch.** The working tree must be clean outside `<dir>` (`git status --porcelain -- . ':!<dir>'` prints nothing). Switch to `prototype/<name>`: `git switch -c prototype/<name>`, or `git switch prototype/<name>` if an interrupted attempt left it. Note `base = git rev-parse HEAD`.
+3. **Brief.** Write `<dir>/runs/NN-brief.md` as in [Work one ticket](#work-one-ticket), with these differences: it is a **prototype brief**; the branch is `prototype/<name>`, which already exists and is checked out; the commit subject format is `prototype: <summary> (ticket NN)`; there is no Gate to run; the report must end with a `## Checkpoint` section giving `Branch:`, `Run:` (one command or one file to open, from the repo root, after `git switch prototype/<name>`) and `Variants:` (each variant's name and what it shows).
+4. **Dispatch** one fresh Implementer as in Work one ticket, prompt `Brief: <brief path>. Build this prototype.`
+5. **Verify**, whatever the report claims:
+   - `git branch --show-current` is `prototype/<name>` and `git rev-list --count <base>..HEAD` is at least `1`
+   - those commits touch nothing under `<dir>`: `git diff --name-only <base> HEAD`
+   - the working tree is clean outside `<dir>`
+   - the report's `## Checkpoint` section gives a branch, a run instruction and at least two variants
+
+   Then switch back to the run branch, whatever the outcome: `git switch <run branch>`. If the tree is not clean, name the leftover paths in the Ledger row instead of switching with them, and [stop as stalled](#stalls). Check that `git rev-parse HEAD` still equals `run`: anything else means prototype code reached the run branch — [stop as stalled](#stalls).
+6. **Record.**
+   - Passed → append a `## Prototype` section to the ticket with the branch, the run instruction, the variants and the report path, and set its `Status:` to `ready-for-human`. Ledger row: outcome `prototype ready`, commits `<base>..prototype/<name>`. Checkpoint item, carrying everything the human needs to compare: `- [ ] NN prototype — which variant: <variant> / <variant>? — branch prototype/<name>; run: <run instruction>; <ticket path>`.
+   - No commit, or `BLOCKED` / `NEEDS_CONTEXT` → as in the Work one ticket table: `Status:` back to `ready-for-agent`, Ledger row, Checkpoint item `- [ ] NN <status> — ... — <report path>`.
+   - Any other failed check with commits on the prototype branch → `Status:` back to `ready-for-agent`, Ledger row naming the failed check and the range `<base>..prototype/<name>`, Checkpoint item `- [ ] NN prototype check failed — <check> — <report path>`. The run branch is untouched, so the run carries on.
+7. Tell the user one line: `NN <title>: <prototype ready on prototype/<name> | outcome>`, [count the attempt](#stalls) and pick the next ticket.
 
 ## Review and fix loop
 
@@ -123,12 +145,14 @@ Reached when nothing is workable. Checkpoints are held back until then, so the h
 3. **Notify** once: `/sdd <slug>: <n> Checkpoint item(s) waiting`.
 4. **Ask** with `AskUserQuestion`: one question per item, at most four per call, calls back to back. Each question gives the context the human needs to decide without digging (the ticket or review path, what each option changes) and offers up to three answers plus `Defer`:
    - decision ticket → the options it names
-   - `NEEDS_CONTEXT` / `BLOCKED` / `stuck` ticket → `Retry with guidance` (the guidance comes as the free-text answer), `Wontfix`
+   - prototype ticket → its variants (up to three; more go in as free text), with the branch and run instruction in the question
+   - `NEEDS_CONTEXT` / `BLOCKED` / `stuck` / `prototype check failed` ticket → `Retry with guidance` (the guidance comes as the free-text answer), `Wontfix`
    - `Gate` → the Gate candidates
 
    No `AskUserQuestion` → leave every item open and [Finish](#finish) as stopped at a Checkpoint.
 5. **Write answers back** to their tickets:
    - decision ticket → append `## Answer` with the answer and `(Checkpoint K)`, set `Status:` to `done (decision)`
+   - prototype ticket → append `## Answer` with the chosen variant and `(Checkpoint K)`, set `Status:` to `done (prototype)`, Ledger outcome `done` with the variant. Its dependents' briefs list it, so they build on that choice
    - escalated ticket, retry → append the guidance under `## Comments` as `Checkpoint K: <answer>`, set `Status:` to `ready-for-agent`, Ledger outcome `reopened`
    - escalated ticket, wontfix → `Status: wontfix`, Ledger outcome `wontfix`
    - Gate → record the chosen Gate as a Ruling and in `## Run`
@@ -138,7 +162,7 @@ Reached when nothing is workable. Checkpoints are held back until then, so the h
 
 ## Stalls
 
-A **ticket attempt** is one pass through [Work one ticket](#work-one-ticket), including its review and fix loop. It makes progress when the ticket ends `done`; an answered Checkpoint also counts as progress. Keep a count of consecutive attempts without progress; progress resets it to zero. When it reaches 2, the run has stalled: stop as stalled instead of picking the next ticket. The count starts at zero in every session.
+A **ticket attempt** is one pass through [Work one ticket](#work-one-ticket), including its review and fix loop, or through [Build a prototype](#build-a-prototype). It makes progress when the ticket ends `done`, or a prototype ends `prototype ready`; an answered Checkpoint also counts as progress. Keep a count of consecutive attempts without progress; progress resets it to zero. When it reaches 2, the run has stalled: stop as stalled instead of picking the next ticket. The count starts at zero in every session.
 
 **Stop as stalled**: add `- [ ] Run stalled — <reason> — <ledger rows or log path>` under `## Checkpoints`, notify `/sdd <slug>: run stalled — <reason>`, and [Finish](#finish). Re-running `/sdd <slug>` resumes from the Ledger.
 
@@ -154,6 +178,7 @@ Final message:
 - the deferred findings from the Ledger
 - every Ruling from the Ledger
 - the run's commit range `<base>..HEAD` and that State files are uncommitted
+- any `prototype/*` branches the run created, left in place: they are the prototypes' record, and deleting them is the human's call
 
 ## Ledger template
 

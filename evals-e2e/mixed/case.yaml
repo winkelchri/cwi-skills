@@ -2,11 +2,13 @@ schema_version: "1.0"
 name: mixed
 description: >
   An AFK ticket (01), a HITL ticket (02) that holds agent work plus a real decision and
-  blocks ticket 03, and a ticket labelled HITL that holds no decision (04). /sdd must
-  finish 01, split 02 into its agent part (built and done) and a decision ticket 05
-  blocked by it, reclassify 04 as AFK with a Ruling and finish it, leave 03 untouched
-  because it now waits on the decision, run the Gate and stop at a Checkpoint recorded in
-  the Ledger. Headless runs have no AskUserQuestion, so the run stops there.
+  blocks ticket 03, a ticket labelled HITL that holds no decision (04), and a prototype
+  ticket (05) that blocks ticket 06. /sdd must finish 01, split 02 into its agent part
+  (built and done) and a decision ticket 07 blocked by it, reclassify 04 as AFK with a
+  Ruling and finish it, build 05's variants on its own prototype/separator branch (never
+  on the run branch) and leave 05 waiting for the human's choice, leave 03 and 06
+  untouched because they wait on a decision, run the Gate and stop at a Checkpoint
+  recorded in the Ledger. Headless runs have no AskUserQuestion, so the run stops there.
   Grades end state only.
   Needs Bash, so it lives outside the default evals/ suite. Run it with:
   claude plugin eval . --trust-plugin --eval-dir evals-e2e --case mixed --scaffold --allow-tools Bash Write Edit --ablation none
@@ -30,11 +32,11 @@ graders:
     pattern: 'Status:\**\s*done \([0-9a-f]{7,40}\)'
   - type: regex
     name: decision-ticket-open
-    target: {source: file, path: .scratch/demo/issues/05-length-cap-decision.md}
+    target: {source: file, path: .scratch/demo/issues/07-length-cap-decision.md}
     pattern: 'Status:\**\s*ready-for-human'
   - type: regex
     name: decision-blocked-by-agent-part
-    target: {source: file, path: .scratch/demo/issues/05-length-cap-decision.md}
+    target: {source: file, path: .scratch/demo/issues/07-length-cap-decision.md}
     pattern: 'Blocked by:\**\s*0?2\b'
   - type: regex
     name: reclassified-ticket-done
@@ -47,7 +49,7 @@ graders:
   - type: regex
     name: blocked-ticket-waits-on-decision
     target: {source: file, path: .scratch/demo/issues/03-capped-slugs.md}
-    pattern: 'Blocked by:\**[^\n]*\b0?5\b'
+    pattern: 'Blocked by:\**[^\n]*\b0?7\b'
   - type: regex
     name: no-commit-for-blocked-ticket
     target: {source: file, path: .git/logs/HEAD}
@@ -61,11 +63,53 @@ graders:
     name: gate-ran-before-checkpoint
     target: {source: file, path: .scratch/demo/runs/gate-checkpoint-1.log}
     pattern: '# pass \d+'
+  - type: regex
+    name: prototype-branch-exists
+    target: {source: file, path: .git/refs/heads/prototype/separator}
+    pattern: '^[0-9a-f]{40}'
+  - type: regex
+    name: prototype-committed-on-its-branch
+    target: {source: file, path: .git/logs/refs/heads/prototype/separator}
+    pattern: '\(ticket 05\)'
+  - type: regex
+    name: prototype-not-on-run-branch
+    target: {source: file, path: .git/logs/refs/heads/sdd/demo}
+    pattern: '\(ticket 05'
+    match: count:0
+  - type: regex
+    name: run-ends-on-run-branch
+    target: {source: file, path: .git/HEAD}
+    pattern: 'refs/heads/sdd/demo'
+  - type: regex
+    name: prototype-awaits-choice
+    target: {source: file, path: .scratch/demo/issues/05-separator.md}
+    pattern: 'Status:\**\s*ready-for-human'
+  - type: regex
+    name: prototype-section-names-branch
+    target: {source: file, path: .scratch/demo/issues/05-separator.md}
+    pattern: '## Prototype[\s\S]*prototype/separator'
+  - type: regex
+    name: prototype-dependent-untouched
+    target: {source: file, path: .scratch/demo/issues/06-separator.md}
+    pattern: 'Status:\**\s*ready-for-agent'
+  - type: regex
+    name: no-commit-for-prototype-dependent
+    target: {source: file, path: .git/logs/HEAD}
+    pattern: '\(ticket 06'
+    match: count:0
+  - type: tool_used
+    name: prototype-skill-used
+    tool: Skill
+    input_match: 'mattpocock-skills:prototype'
+    min: 1
   - type: llm
     name: ledger
     focus: {source: file, path: .scratch/demo/ledger.md}
     criteria: >
       The Ledger records tickets 01, 02 and 04 as done with commits; a Ruling that ticket
-      02 was split with its decision moved to ticket 05; a Ruling that ticket 04 was
-      reclassified from HITL to AFK because it holds no real decision; and an open
-      (unanswered) Checkpoint item for the ticket 05 decision about the maximum slug length.
+      02 was split with its decision moved to ticket 07; a Ruling that ticket 04 was
+      reclassified from HITL to AFK because it holds no real decision; an open
+      (unanswered) Checkpoint item for the ticket 07 decision about the maximum slug
+      length; and an open Checkpoint item for the ticket 05 prototype that names the
+      branch prototype/separator, says how to run the prototype, and names the hyphen
+      and underscore variants to choose between.
