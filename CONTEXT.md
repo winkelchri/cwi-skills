@@ -18,6 +18,10 @@ _Avoid_: Worker, coder, child agent
 A fresh subagent that performs a Ticket review and returns spec and quality verdicts with severities.
 _Avoid_: Code reviewer, checker
 
+**Branch reviewer**:
+A fresh Opus subagent that performs the Branch review, or its one re-review, and sorts each finding as unambiguous or a judgement call.
+_Avoid_: Final reviewer
+
 ### Tickets
 
 **Ticket**:
@@ -37,7 +41,7 @@ A Ticket (`Type: prototype`) whose decision is best made by trying throwaway cod
 _Avoid_: Spike ticket, experiment
 
 **Checkpoint**:
-A pause where the Operator presents the human with a batch of pending HITL decisions, prototype selections or escalations, after the integrated branch has passed the Gate. The run continues on every Ticket not blocked by a pending Checkpoint.
+A pause where the Operator presents the human with a batch of pending HITL decisions, prototype selections or escalations, after the integrated branch has passed the Gate. The run continues on every Ticket not blocked by a pending Checkpoint. The **Final Checkpoint** ends the run: a summary, every Ruling and the deferred findings, with push, PR and cleanup offered but never performed unasked.
 _Avoid_: Stopgap, check-in, approval gate
 
 ### Artifacts

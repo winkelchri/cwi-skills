@@ -4,7 +4,8 @@ description: >
   Three chained AFK tickets (numbering differs from dependency order: 02, then 03, then 01)
   in a small node fixture repo. /sdd must finish all three with one commit each, a Ledger
   holding the Gate Ruling, and a green Gate. Grades end state only.
-  Ticket 07 adds the Branch review grader the spec's happy path names.
+  Once all three are done a Branch review must run (code-review on Opus); any bug tickets it
+  files may add commits, so the one-commit grader counts only tickets 01-03.
   Needs Bash, so it lives outside the default evals/ suite. Run it with:
   claude plugin eval . --trust-plugin --eval-dir evals-e2e --scaffold --allow-tools Bash Write Edit --ablation none
 tags: [e2e]
@@ -32,7 +33,7 @@ graders:
   - type: regex
     name: one-commit-per-ticket
     target: {source: file, path: .git/logs/HEAD}
-    pattern: '\tcommit: '
+    pattern: '\(ticket 0[123]\)\n'
     match: count:3
   - type: regex
     name: dependency-order
@@ -47,12 +48,27 @@ graders:
     focus: {source: file, path: .scratch/demo/ledger.md}
     criteria: >
       The Ledger records the Gate command `npm test` as a Ruling with a reason and a cost if wrong,
-      and records tickets 01, 02 and 03 each as done with a commit sha.
+      and records tickets 01, 02 and 03 each as done with a commit sha. Its `## Run` section
+      has a `Branch review:` line pointing at a branch review file.
   - type: tool_used
     name: implementer-dispatched
     tool: Agent
     input_match: 'cwi-skills:implementer'
     min: 3
+  - type: tool_used
+    name: branch-review-dispatched
+    tool: Agent
+    input_match: 'cwi-skills:branch-reviewer'
+    min: 1
+  - type: tool_used
+    name: code-review-skill-used
+    tool: Skill
+    input_match: 'mattpocock-skills:code-review'
+    min: 1
+  - type: regex
+    name: branch-review-written
+    target: {source: file, path: .scratch/demo/runs/branch-review-0.md}
+    pattern: '## Findings'
   - type: tool_used
     name: tdd-skill-used
     tool: Skill

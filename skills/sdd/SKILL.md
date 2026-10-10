@@ -16,6 +16,8 @@ No slug given → reply `Usage: /sdd <slug>` and stop.
 
   > No `git push` or force-push. No `git reset`, no branch deletion, no history rewriting. No merging, rebasing or cherry-picking a `prototype/*` branch into any other branch. No reading or writing files outside this repository; the one exception is reading installed skills under `~/.claude/plugins/`.
 
+  The human's explicit pick at the [Final Checkpoint](#final-checkpoint) is the only exception, and it covers the Operator alone.
+
 - **Ruling**: any judgement call you make without the human goes into the Ledger as `<what> — <why> — <cost if wrong>`.
 - **Checkpoint item**: anything only the human can settle — a decision ticket, a prototype's variants to choose from, an escalated ticket, an ambiguous Gate. Record each as an open line under `## Checkpoints` in the Ledger: `- [ ] <id> — <question> — <context path>`, where `<id>` is the ticket number and kind (`05 decision`, `05 prototype`, `03 NEEDS_CONTEXT`, `03 stuck`) or `Gate`. Items wait for the next [Checkpoint](#checkpoint); only startup items are asked at once, because no work can start without them.
 - **Notifications** — `PushNotification`, loaded through ToolSearch if it is deferred — go out for exactly three events: Checkpoint items waiting, run done, run stalled. Nothing else notifies. A notification tool that is missing, or answers that it did not send, changes nothing: carry on.
@@ -61,6 +63,7 @@ A HITL ticket should leave the human only the decision. Read it, the spec and th
   - Every ticket that lists `NN` under `Blocked by:` gets `MM` added there: it needs the decision, not just the agent part.
   - Record a Ruling: `NN split: agent part <scope>; decision moved to MM — <why> — <cost if wrong>`.
 - **Decision only.** Nothing an agent can do or verify ahead of the decision. Add `**Type:** decision` and leave it `ready-for-human`. Record a Ruling saying so.
+- **Branch review bug** (`Type: bug`, `Found by: branch review`) with a real decision: the fix comes after the decision, so the split runs the other way. Create the decision ticket `MM-<name>-decision.md` as above but with `**Blocked by:** None`; the bug ticket keeps `Type: bug`, gets `MM` under `Blocked by:` and goes to `ready-for-agent`, so it is built on the answer. Record a Ruling: `NN decision moved to MM; fix waits for it — <why> — <cost if wrong>`.
 
 A `Type: decision` ticket whose blockers are all done becomes a Checkpoint item: `- [ ] MM decision — <question> — <ticket path>`.
 
@@ -138,9 +141,13 @@ Tell the user one line per review: `NN review R: <verdict line>`.
 
 ## Checkpoint
 
-Reached when nothing is workable. Checkpoints are held back until then, so the human is interrupted as rarely as possible.
+Reached when nothing is workable. Checkpoints are held back until then, so the human is interrupted as rarely as possible. Agent work comes first, by the Ledger's `Branch review:` line in `## Run`:
 
-1. **Items.** Collect every open (`- [ ]`) item under `## Checkpoints`, adding one for each `Type: decision` ticket whose blockers are all done and which has none yet. None → [Finish](#finish).
+- `filing ...` → an interrupted [Branch review](#branch-review): resume it at step 5.
+- `filed ...` → the fix wave is over: run the [Re-review](#re-review) now, then continue here. Open Checkpoint items, and bug tickets still waiting on the human, never delay it.
+- absent, and every ticket's status starts with `done` or is `wontfix` → run the [Branch review](#branch-review) instead of this Checkpoint.
+
+1. **Items.** Collect every open (`- [ ]`) item under `## Checkpoints`, adding one for each `Type: decision` ticket whose blockers are all done and which has none yet. None → [Final Checkpoint](#final-checkpoint) when every ticket's status starts with `done` or is `wontfix` and the `Branch review:` line reads `clean` or `re-reviewed`; otherwise [Finish](#finish).
 2. **Gate.** Run the Gate on the integrated run branch, output to `<dir>/runs/gate-checkpoint-K.log` (`K` counts this run's Checkpoints). Red → present nothing and [stop as stalled](#stalls), naming the log: the human must never test broken code.
 3. **Notify** once: `/sdd <slug>: <n> Checkpoint item(s) waiting`.
 4. **Ask** with `AskUserQuestion`: one question per item, at most four per call, calls back to back. Each question gives the context the human needs to decide without digging (the ticket or review path, what each option changes) and offers up to three answers plus `Defer`:
@@ -160,6 +167,67 @@ Reached when nothing is workable. Checkpoints are held back until then, so the h
    Then tick the item: `- [x] <item> — answered at Checkpoint K: <answer>`. A deferred item stays open with `(deferred at Checkpoint K)` appended, and its ticket stays as it is.
 6. **Carry on.** At least one answer → back to [Pick the next ticket](#pick-the-next-ticket): answers may unblock work, and deferred items keep waiting while everything else runs. Every item deferred → [Finish](#finish) as stopped at a Checkpoint.
 
+## Branch review
+
+Once every ticket is done, one Branch review on Opus looks at the whole run branch for problems that span tickets. Its findings become bug tickets, which go through the normal loop.
+
+1. **Brief.** Write `<dir>/runs/branch-review-brief-0.md` with: the fixed point (the run's base sha from `## Run`), the spec path, the tickets folder `<dir>/issues/`, the output path `<dir>/runs/branch-review-0.md`, the skills root and the safety rules, word for word.
+2. **Dispatch** one fresh Branch reviewer: Agent tool, `subagent_type: cwi-skills:branch-reviewer`, `model: opus`, in the foreground, prompt `Branch review brief: <path>.` Its final line is `FINDINGS: <n> — unambiguous <a>; judgement <j>; minor <m>`. No such line, or no review file → [stop as stalled](#stalls).
+3. **Defer Minors.** Copy each line of the review's `## Minor` section into the Ledger's `## Deferred findings` as `- branch review — <finding>`.
+4. **No findings** (`<n>` is `0`) → set `- Branch review: clean — <review path>` in `## Run` and return to the [Checkpoint](#checkpoint), which leads to the Final Checkpoint once no item is open.
+5. **File tickets.** Set `- Branch review: filing — <review path> — wave base <git rev-parse HEAD>` in `## Run`. Then for each line of the review's `## Findings`, in order, create `<dir>/issues/MM-<title-in-kebab-case>.md` with `MM` the next free number:
+
+   ```markdown
+   # MM — <title>
+
+   **Type:** bug
+   **Found by:** branch review
+   **Finding:** B<n> — <review path>
+   **Blocked by:** None
+   **Status:** <ready-for-agent if unambiguous | ready-for-human if judgement>
+
+   ## What to fix
+
+   <the problem, with its path:line and the quoted spec line or standard>
+
+   Fix direction: <the review's fix direction>
+
+   - [ ] The problem is gone, with a test at the spec's seam that would have caught it
+   ```
+
+   A resumed run that finds the line at `filing` files only the findings no ticket's `**Finding:**` line names yet.
+6. Set the line to `- Branch review: filed MM–NN — <review path> — wave base <sha>` and tell the user one line: `Branch review: <FINDINGS line>; filed MM–NN`. Back to [Pick the next ticket](#pick-the-next-ticket): `ready-for-human` bug tickets go through HITL triage like any other.
+
+## Re-review
+
+The fix wave is every ticket attempt between filing and the next time nothing is workable. Exactly one re-review follows it, at that moment, even while Checkpoint items are open: bug tickets that wait on the human are fixed later with a Ticket review only. Its findings are not filed as tickets, so the run cannot loop.
+
+1. **No fix commits** (`git rev-list --count <wave base>..HEAD` is `0`) → nothing to re-review yet. Every filed ticket is `wontfix` or `done (decision)` → set `- Branch review: re-reviewed — filed MM–NN from <review path> — no fix commits`. Otherwise the fixes wait on the human: leave the line at `filed`, so the re-review runs after the wave that follows their answers. Either way, return to the [Checkpoint](#checkpoint)'s numbered steps.
+2. **Brief** `<dir>/runs/branch-review-brief-1.md`: as for the Branch review, plus the previous review path, the fixed point is the wave base, and the output path is `<dir>/runs/branch-review-1.md`.
+3. **Dispatch** a fresh Branch reviewer as before, prompt `Branch re-review brief: <path>.` Missing line or file → [stop as stalled](#stalls).
+4. **Defer** the re-review's `## Minor` lines, its new `## Findings`, and every NOT ADDRESSED mark whose ticket is done, into `## Deferred findings` as `- branch re-review — <finding>`. A NOT ADDRESSED finding whose ticket is still open stays with that ticket.
+5. Set `- Branch review: re-reviewed — filed MM–NN from <review path> — re-review <re-review path>`, tell the user one line `Branch re-review: <FINDINGS line>`, and return to the [Checkpoint](#checkpoint)'s numbered steps.
+
+## Final Checkpoint
+
+Reached when every ticket's status starts with `done` or is `wontfix`, no Checkpoint item is open, and the Branch review is `clean` or `re-reviewed`.
+
+1. **Gate.** Run the Gate on the run branch, output to `<dir>/runs/gate-final.log`. Red → [stop as stalled](#stalls), naming the log.
+2. **Notify** once: `/sdd <slug>: run done`.
+3. **Present** in one message:
+   - the run summary: each ticket's outcome, review verdict and commit range, the Branch review and re-review results with their paths, and the run's commit range `<base>..HEAD`
+   - every Ruling from the Ledger
+   - every line under `## Deferred findings`, numbered
+   - the actions offered: push the run branch, open a PR, delete the `prototype/*` branches and worktrees the run created. Give the exact command for each.
+4. **Ask** with `AskUserQuestion`:
+   - which deferred findings become tickets for one more wave (multi-select; with more than four, list them in the question and take the numbers as free text), or none
+   - which offered actions to take (multi-select), or none
+
+   No `AskUserQuestion` → ask nothing, take no action, and [Finish](#finish) as done. Running `/sdd <slug>` again comes straight back here.
+5. **Picked findings** → for each, file a ticket as in [Branch review](#branch-review) step 5, with `**Found by:** final checkpoint`, `**Finding:**` naming the Ledger line, and `Status: ready-for-agent`. Mark its Ledger line `→ ticket MM`. Back to [Pick the next ticket](#pick-the-next-ticket); this wave gets Ticket reviews but no new Branch review, and ends here again.
+6. **Picked actions.** Push, PR creation and branch or worktree deletion happen only here, only when the human picks them, and only the picked ones. That explicit choice is the one exception to the safety rules; it never goes into a brief. Run each picked command and report its result. Nothing picked → leave the branch and every `prototype/*` branch as they are.
+7. [Finish](#finish) as done.
+
 ## Stalls
 
 A **ticket attempt** is one pass through [Work one ticket](#work-one-ticket), including its review and fix loop, or through [Build a prototype](#build-a-prototype). It makes progress when the ticket ends `done`, or a prototype ends `prototype ready`; an answered Checkpoint also counts as progress. Keep a count of consecutive attempts without progress; progress resets it to zero. When it reaches 2, the run has stalled: stop as stalled instead of picking the next ticket. The count starts at zero in every session.
@@ -168,17 +236,18 @@ A **ticket attempt** is one pass through [Work one ticket](#work-one-ticket), in
 
 ## Finish
 
-Run done (every ticket `done` or `wontfix`, no open items) → notify `/sdd <slug>: run done`. Stopped at a Checkpoint → its notification already went out. Stalled → so did that one.
+Every way of ending has already sent its notification: run done at the [Final Checkpoint](#final-checkpoint), Checkpoint items waiting, or run stalled. Notify nothing here.
 
-Final message:
+Final message (after a Final Checkpoint, its presentation is this message, plus the outcome of anything picked):
 
 - each ticket's outcome and review verdict, with its commit range for done ones
+- the Branch review and re-review results, with their paths
 - how the run ended: done, stopped at a Checkpoint, or stalled
 - the tickets left open and why, and every open Checkpoint item, so a later `/sdd <slug>` (or an `## Answer` written into a decision ticket) can pick them up
 - the deferred findings from the Ledger
 - every Ruling from the Ledger
 - the run's commit range `<base>..HEAD` and that State files are uncommitted
-- any `prototype/*` branches the run created, left in place: they are the prototypes' record, and deleting them is the human's call
+- any `prototype/*` branches the run created, left in place unless the human picked their deletion at the Final Checkpoint: they are the prototypes' record, and deleting them is the human's call
 
 ## Ledger template
 
@@ -190,6 +259,7 @@ Final message:
 - Branch: <branch> (base <sha>)
 - Gate: `<command>`[, `<command>`]
 - Skills root: <path>
+- Branch review: <filing | filed MM–NN | clean | re-reviewed> — <paths, as the Branch review and Re-review sections give them>
 
 ## Tickets
 
