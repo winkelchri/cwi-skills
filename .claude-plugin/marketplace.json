@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "cwi-skills",
-  "description": "Local marketplace for the cwi-skills personal plugin. Not published.",
+  "description": "Marketplace for the cwi-skills plugin (/sdd subagent-driven development).",
   "owner": {
     "name": "Christopher Winkelmann"
   },
